@@ -33,7 +33,10 @@ class Session(MutableMapping):
 
     def backend_read(self):
         if not self.loaded:
-            data = self.backend.get(self.id, {})
+            try:
+                data = self.backend[self.id]
+            except KeyError:
+                data = {}
             # For each key, we need to check if it's in the set of client keys.
             # If so, both the client and backend sets are dirty, since the key
             # needs to be moved from backend to client.
