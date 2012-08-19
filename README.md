@@ -38,7 +38,7 @@ WSGI environ. The most simple setup looks like:
 
     from gimlet import SessionMiddleware, RedisBackend
 
-    backend = RedisBackend('localhost:6379')
+    backend = RedisBackend()
 
     app = SuperAwesomeApp()
     app = SessionMiddleware(app, 's3krit', backend)
