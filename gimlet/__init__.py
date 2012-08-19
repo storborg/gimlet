@@ -1,6 +1,6 @@
 import os
 import time
-import pickle
+import cPickle as pickle
 
 from collections import MutableMapping
 
