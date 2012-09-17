@@ -2,6 +2,7 @@ import os
 import time
 import cPickle as pickle
 
+from datetime import datetime
 from collections import MutableMapping
 
 from webob import Request
@@ -10,9 +11,11 @@ from itsdangerous import Signer
 
 class Session(MutableMapping):
 
-    def __init__(self, id, backend, client_keys, fresh, client_data=None):
+    def __init__(self, id, created_timestamp, backend, client_keys, fresh,
+            client_data=None):
         self.dirty_keys = set()
         self.id = id
+        self.created_timestamp = created_timestamp
         self.backend = backend
         self.client_keys = client_keys
         self.fresh = fresh
@@ -65,6 +68,10 @@ class Session(MutableMapping):
         else:
             self.backend_dirty = True
 
+    @property
+    def created_time(self):
+        return datetime.utcfromtimestamp(self.created_timestamp)
+
     def __iter__(self):
         self.backend_read()
         return iter(self.data)
@@ -108,20 +115,22 @@ class SessionMiddleware(object):
 
     def deserialize(self, raw_cookie):
         # FIXME Use something better than pickle here.
-        id, client_data = pickle.loads(raw_cookie)
-        return Session(id, self.backend, self.client_keys, fresh=False,
-                       client_data=client_data)
+        id, created_timestamp, client_data = pickle.loads(raw_cookie)
+        return Session(id, created_timestamp, self.backend, self.client_keys,
+                       fresh=False, client_data=client_data)
 
     def serialize(self, sess):
         # FIXME Use something better than pickle here.
-        return pickle.dumps([sess.id, sess.client_data])
+        return pickle.dumps([sess.id, sess.created_timestamp,
+                             sess.client_data])
 
     def make_session_id(self):
         return os.urandom(16).encode('hex')
 
     def new_session(self):
         id = self.make_session_id()
-        return Session(id, self.backend, self.client_keys, fresh=True)
+        return Session(id, int(time.time()), self.backend, self.client_keys,
+                       fresh=True)
 
     def __call__(self, environ, start_response):
         req = Request(environ)

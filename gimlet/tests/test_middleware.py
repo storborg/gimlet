@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from unittest import TestCase
 
 from webob import Request, Response
@@ -56,6 +57,12 @@ class SampleApp(object):
                 resp = HTTPNotFound('key %s not found' % key)
             else:
                 resp = Response('ok')
+        elif action == 'id':
+            resp = Response(str(sess.id))
+        elif action == 'time':
+            resp = Response(str(sess.created_time))
+        elif action == 'timestamp':
+            resp = Response(str(sess.created_timestamp))
         elif action == 'len':
             resp = Response(str(len(sess)))
         elif action == 'iter':
@@ -162,6 +169,25 @@ class TestActions(TestCase):
         resp = self.app.get('/iter')
         resp.mustcontain('frodo')
         resp.mustcontain('gandalf')
+
+    def test_id(self):
+        resp = self.app.get('/id')
+        self.assertEqual(len(resp.body), 32)
+
+    def test_created_timestamp(self):
+        resp = self.app.get('/timestamp')
+        timestamp = int(resp.body)
+
+        resp = self.app.get('/time')
+        tstring = resp.body
+
+        dt = datetime.utcfromtimestamp(timestamp)
+
+        self.assertEqual(str(dt), tstring)
+
+        utcnow = datetime.utcnow()
+        self.assertLess(dt, utcnow)
+        self.assertLess(utcnow - dt, timedelta(seconds=3))
 
 
 class TestMigrating(TestCase):
