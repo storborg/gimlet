@@ -13,7 +13,7 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 class Session(MutableMapping):
 
     def __init__(self, id, created_timestamp, backend, client_keys, fresh,
-            client_data=None):
+                 client_data=None):
         self.dirty_keys = set()
         self.id = id
         self.created_timestamp = created_timestamp
@@ -148,7 +148,6 @@ class SessionMiddleware(object):
         self.client_keys = set(client_keys or [])
         self.serializer = URLSafeCookieSerializer(secret, backend,
                                                   self.client_keys)
-
 
     def make_session_id(self):
         return os.urandom(16).encode('hex')
