@@ -82,11 +82,17 @@ class Session(MutableMapping):
         return len(self.data)
 
     def __getitem__(self, key):
+        return self.get(key)
+
+    def get(self, key):
         if key not in self.data:
             self.backend_read()
         return self.data[key]
 
     def __setitem__(self, key, value):
+        return self.set(key, value)
+
+    def set(self, key, value):
         self.mark_dirty(key)
         self.data[key] = value
 
