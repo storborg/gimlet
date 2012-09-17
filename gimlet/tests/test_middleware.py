@@ -243,25 +243,3 @@ class TestMigrating(TestCase):
         resp = app.get('/get/frodo')
         resp.mustcontain('tired')
         self.assertEqual(backend.values(), [{}])
-
-
-class TestCreationTime(TestCase):
-
-    def test_created_key(self):
-        backend = {}
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', backend,
-                                        client_keys=set(),
-                                        created_key='created_time')
-        app = TestApp(wrapped_app)
-
-        resp = app.get('/')
-        resp.mustcontain('hello')
-
-        self.assertEqual(len(backend.values()), 1)
-        backend_sess = backend.values()[0]
-
-        self.assertEqual(backend_sess.keys(), ['created_time'])
-        ct = backend_sess['created_time']
-
-        resp = app.get('/get/created_time')
-        resp.mustcontain(str(ct))
