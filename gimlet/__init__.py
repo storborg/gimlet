@@ -2,11 +2,12 @@ import os
 import time
 import cPickle as pickle
 
+from struct import Struct
 from datetime import datetime
 from collections import MutableMapping
 
 from webob import Request
-from itsdangerous import Signer
+from itsdangerous import Serializer, URLSafeSerializerMixin
 
 
 class Session(MutableMapping):
@@ -96,13 +97,48 @@ class Session(MutableMapping):
         del self.data[key]
 
 
+class CookieSerializer(Serializer):
+    packer = Struct('16si')
+
+    def __init__(self, secret, backend, client_keys):
+        Serializer.__init__(self, secret)
+        self.backend = backend
+        self.client_keys = client_keys
+
+    def load_payload(self, payload):
+        """
+        Convert a cookie into a Session instance.
+        """
+        raw_id, created_timestamp = \
+            self.packer.unpack(payload[:self.packer.size])
+        client_data_pkl = payload[self.packer.size:]
+
+        id = raw_id.encode('hex')
+        client_data = pickle.loads(client_data_pkl)
+        return Session(id, created_timestamp, self.backend, self.client_keys,
+                       fresh=False, client_data=client_data)
+
+    def dump_payload(self, sess):
+        """
+        Convert a Session instance into a cookie by packing it precisely into a
+        string.
+        """
+        client_data_pkl = pickle.dumps(sess.client_data)
+        raw_id = sess.id.decode('hex')
+        return (self.packer.pack(raw_id, sess.created_timestamp) +
+                client_data_pkl)
+
+
+class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
+    pass
+
+
 class SessionMiddleware(object):
     def __init__(self, app, secret, backend,
                  cookie_name='gimlet', environ_key='gimlet.session',
                  secure=True, cookie_expires=True, client_keys=None,
                  created_key=None):
         self.app = app
-        self.signer = Signer(secret)
         self.backend = backend
 
         self.cookie_name = cookie_name
@@ -112,17 +148,9 @@ class SessionMiddleware(object):
 
         self.created_key = created_key
         self.client_keys = set(client_keys or [])
+        self.serializer = URLSafeCookieSerializer(secret, backend,
+                                                  self.client_keys)
 
-    def deserialize(self, raw_cookie):
-        # FIXME Use something better than pickle here.
-        id, created_timestamp, client_data = pickle.loads(raw_cookie)
-        return Session(id, created_timestamp, self.backend, self.client_keys,
-                       fresh=False, client_data=client_data)
-
-    def serialize(self, sess):
-        # FIXME Use something better than pickle here.
-        return pickle.dumps([sess.id, sess.created_timestamp,
-                             sess.client_data])
 
     def make_session_id(self):
         return os.urandom(16).encode('hex')
@@ -136,8 +164,7 @@ class SessionMiddleware(object):
         req = Request(environ)
 
         if self.cookie_name in req.cookies:
-            raw_cookie = self.signer.unsign(req.cookies[self.cookie_name])
-            sess = self.deserialize(raw_cookie)
+            sess = self.serializer.loads(req.cookies[self.cookie_name])
         else:
             sess = self.new_session()
             if self.created_key:
@@ -152,8 +179,7 @@ class SessionMiddleware(object):
         # OR
         # - the cookie is fresh AND data has been changed on the backend
         if sess.client_dirty or (sess.fresh and sess.backend_dirty):
-            raw_cookie = self.serialize(sess)
-            resp.set_cookie(self.cookie_name, self.signer.sign(raw_cookie))
+            resp.set_cookie(self.cookie_name, self.serializer.dumps(sess))
 
         # Write to the backend IFF the following conditions:
         # - data has been changed on the backend
