@@ -103,6 +103,14 @@ Features that may be coming soon:
 - Support no-backend operation (clientside only).
 - More backends, possibly including SQL.
 - Make cookies HttpOnly.
+- Properly support HTTPS--when trying to set a secure key inside a non-HTTPS
+  context, throw an exception.
+
+Possible:
+
+- Add mechanism to manually save outside of the end of a WSGI request cycle?
+  E.g. for deferred operations that happen after consuming a returned
+  generator.
 
 Test areas that still need work:
 
