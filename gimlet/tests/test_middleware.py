@@ -55,6 +55,12 @@ class SampleApp(object):
                 resp = Response('true')
             else:
                 resp = Response('false')
+        elif action == 'is_secure':
+            key = req.path_info_pop()
+            resp = Response(str(sess.is_secure(key)))
+        elif action == 'is_permanent':
+            key = req.path_info_pop()
+            resp = Response(str(sess.is_permanent(key)))
         elif action == 'del':
             key = req.path_info_pop()
             try:
@@ -149,6 +155,12 @@ class TestActions(TestCase):
         resp = self.app.get('/get/boromir')
         resp.mustcontain('111')
 
+        resp = self.app.get('/is_secure/boromir')
+        resp.mustcontain('True')
+
+        resp = self.app.get('/is_permanent/boromir')
+        resp.mustcontain('False')
+
         resp = self.app.get('/set/boromir/333?clientside=1&secure=0')
         resp.mustcontain('ok')
 
@@ -156,6 +168,9 @@ class TestActions(TestCase):
             '/set/faramir/222?clientside=1&secure=1&permanent=1')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
+
+        resp = self.app.get('/is_permanent/faramir')
+        resp.mustcontain('True')
 
         resp = self.app.get('/get/boromir')
         resp.mustcontain('333')

@@ -71,6 +71,12 @@ class Session(MutableMapping):
                 channel = self.secure_nonperm
         channel.set(key, val, clientside=clientside)
 
+    def is_permanent(self, key):
+        return (key in self.secure_perm) or (key in self.insecure)
+
+    def is_secure(self, key):
+        return (key in self.secure_nonperm) or (key in self.secure_perm)
+
 
 class SessionChannel(object):
 
