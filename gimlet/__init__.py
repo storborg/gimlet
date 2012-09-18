@@ -14,25 +14,23 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 class Session(MutableMapping):
 
     def __init__(self, channels, defaults):
-        self.insecure = channels['insecure']
-        self.secure_nonperm = channels['secure_nonperm']
-        self.secure_perm = channels['secure_perm']
+        self.channels = channels
         self.defaults = defaults
 
     @property
     def id(self):
-        return self.insecure.id
+        return self.channels['insecure'].id
 
     @property
     def created_timestamp(self):
-        return self.insecure.created_timestamp
+        return self.channels['insecure'].created_timestamp
 
     @property
     def created_time(self):
-        return self.insecure.created_time
+        return self.channels['insecure'].created_time
 
     def __getitem__(self, key):
-        for channel in [self.insecure, self.secure_nonperm, self.secure_perm]:
+        for channel in self.channels.values():
             if key in channel:
                 return channel.get(key)
         raise KeyError
@@ -51,14 +49,14 @@ class Session(MutableMapping):
         if clientside is None:
             clientside = self.defaults['clientside']
 
-        channel = self.insecure
+        channel_key = 'insecure'
         if secure:
             if permanent:
-                channel = self.secure_perm
+                channel_key = 'secure_perm'
             else:
-                channel = self.secure_nonperm
+                channel_key = 'secure_nonperm'
 
-        return channel, clientside
+        return self.channels[channel_key], clientside
 
     def get(self, key, secure=None, permanent=None, clientside=None):
         channel, clientside = self._check_options(secure, permanent,
@@ -78,29 +76,26 @@ class Session(MutableMapping):
     def __delitem__(self, key):
         if key not in self:
             raise KeyError
-        for channel in [self.insecure, self.secure_nonperm, self.secure_perm]:
+        for channel in self.channels.values():
             if key in channel:
                 channel.delete(key)
 
     def __contains__(self, key):
-        return any((key in channel) for channel in
-                   [self.insecure, self.secure_nonperm, self.secure_perm])
+        return any((key in channel) for channel in self.channels.values())
 
     def __iter__(self):
-        return itertools.chain(iter(self.insecure),
-                               iter(self.secure_nonperm),
-                               iter(self.secure_perm))
+        return itertools.chain(*[iter(ch) for ch in self.channels.values()])
 
     def __len__(self):
-        return (len(self.insecure) +
-                len(self.secure_nonperm) +
-                len(self.secure_perm))
+        return sum([len(ch) for ch in self.channels.values()])
 
     def is_permanent(self, key):
-        return (key in self.secure_perm) or (key in self.insecure)
+        return ((key in self.channels['secure_perm']) or
+                (key in self.channels['insecure']))
 
     def is_secure(self, key):
-        return (key in self.secure_nonperm) or (key in self.secure_perm)
+        return ((key in self.channels['secure_nonperm']) or
+                (key in self.channels['secure_perm']))
 
 
 class SessionChannel(object):
