@@ -217,7 +217,7 @@ class SessionMiddleware(object):
         # - data has been changed on the client
         # OR
         # - the cookie is fresh AND data has been changed on the backend
-        if channel.client_dirty or (channel.fresh and channel.backend_dirty):
+        if channel.client_dirty or channel.fresh:
             resp.set_cookie(name, self.serializer.dumps(channel),
                             **self.channel_opts[key])
 
