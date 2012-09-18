@@ -1,5 +1,6 @@
 import os
 import time
+import itertools
 import cPickle as pickle
 
 from struct import Struct
@@ -12,62 +13,31 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 
 class Session(MutableMapping):
 
-    def __init__(self, id, created_timestamp, backend, client_keys, fresh,
+    def __init__(self, id, created_timestamp, backend, fresh,
                  client_data=None):
         self.dirty_keys = set()
         self.id = id
         self.created_timestamp = created_timestamp
         self.backend = backend
-        self.client_keys = client_keys
         self.fresh = fresh
 
-        self.data = client_data or {}
-
+        self.client_data = client_data or {}
         self.client_dirty = False
-        self.backend_dirty = False
-        self.loaded = False
 
-        # If there are any keys set in client_data that aren't in client_keys,
-        # they need to be moved from client to server, so mark both as dirty.
-        keys = set(self.data.keys())
-        if not keys.issubset(client_keys):
-            assert not self.fresh, ("can't create initial session with "
-                                    "server-resident keys: %r" % client_data)
-            self.client_dirty = self.backend_dirty = True
+        self.backend_data = {}
+        self.backend_dirty = False
+        self.backend_loaded = False
 
     def backend_read(self):
-        if not self.loaded:
+        if not self.backend_loaded:
             try:
-                data = self.backend[self.id]
+                self.backend_data = self.backend[self.id]
             except KeyError:
-                data = {}
-            # For each key, we need to check if it's in the set of client keys.
-            # If so, both the client and backend sets are dirty, since the key
-            # needs to be moved from backend to client.
-            for key, val in data.iteritems():
-                if key in self.client_keys:
-                    self.client_dirty = self.backend_dirty = True
-                self.data.setdefault(key, val)
-            self.loaded = True
+                self.backend_data = {}
+            self.backend_loaded = True
 
     def backend_write(self):
         self.backend[self.id] = self.backend_data
-
-    @property
-    def client_data(self):
-        return {k: v for k, v in self.data.iteritems()
-                if k in self.client_keys}
-
-    @property
-    def backend_data(self):
-        return {k: v for k, v in self.data.iteritems()
-                if k not in self.client_keys}
-
-    def mark_dirty(self, key):
-        if key in self.client_keys:
-            self.client_dirty = True
-        else:
-            self.backend_dirty = True
 
     @property
     def created_time(self):
@@ -75,41 +45,49 @@ class Session(MutableMapping):
 
     def __iter__(self):
         self.backend_read()
-        return iter(self.data)
+        return itertools.chain(iter(self.client_data), iter(self.backend_data))
 
     def __len__(self):
         self.backend_read()
-        return len(self.data)
+        return len(self.backend_data) + len(self.client_data)
 
     def __getitem__(self, key):
         return self.get(key)
 
-    def get(self, key):
-        if key not in self.data:
+    def get(self, key, clientside=None):
+        if (key in self.client_data) or clientside:
+            return self.client_data[key]
+        else:
             self.backend_read()
-        return self.data[key]
+            return self.backend_data[key]
 
     def __setitem__(self, key, value):
         return self.set(key, value)
 
-    def set(self, key, value):
-        self.mark_dirty(key)
-        self.data[key] = value
+    def set(self, key, value, clientside=None):
+        if clientside:
+            self.client_data[key] = value
+            self.client_dirty = True
+        else:
+            self.backend_data[key] = value
+            self.backend_dirty = True
 
     def __delitem__(self, key):
-        if key not in self.client_keys:
+        if key in self.client_data:
+            del self.client_data[key]
+            self.client_dirty = True
+        else:
             self.backend_read()
-        self.mark_dirty(key)
-        del self.data[key]
+            del self.backend_data[key]
+            self.backend_dirty = True
 
 
 class CookieSerializer(Serializer):
     packer = Struct('16si')
 
-    def __init__(self, secret, backend, client_keys):
+    def __init__(self, secret, backend):
         Serializer.__init__(self, secret)
         self.backend = backend
-        self.client_keys = client_keys
 
     def load_payload(self, payload):
         """
@@ -121,7 +99,7 @@ class CookieSerializer(Serializer):
 
         id = raw_id.encode('hex')
         client_data = pickle.loads(client_data_pkl)
-        return Session(id, created_timestamp, self.backend, self.client_keys,
+        return Session(id, created_timestamp, self.backend,
                        fresh=False, client_data=client_data)
 
     def dump_payload(self, sess):
@@ -142,7 +120,7 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 class SessionMiddleware(object):
     def __init__(self, app, secret, backend,
                  cookie_name='gimlet', environ_key='gimlet.session',
-                 secure=True, client_keys=None):
+                 secure=True):
         self.app = app
         self.backend = backend
 
@@ -150,17 +128,14 @@ class SessionMiddleware(object):
         self.environ_key = environ_key
         self.secure = secure
 
-        self.client_keys = set(client_keys or [])
-        self.serializer = URLSafeCookieSerializer(secret, backend,
-                                                  self.client_keys)
+        self.serializer = URLSafeCookieSerializer(secret, backend)
 
     def make_session_id(self):
         return os.urandom(16).encode('hex')
 
     def new_session(self):
         id = self.make_session_id()
-        return Session(id, int(time.time()), self.backend, self.client_keys,
-                       fresh=True)
+        return Session(id, int(time.time()), self.backend, fresh=True)
 
     def __call__(self, environ, start_response):
         req = Request(environ)

@@ -33,7 +33,10 @@ class SampleApp(object):
         elif action == 'set':
             key = req.path_info_pop()
             val = req.path_info_pop()
-            sess[key] = val
+            if req.params.get('clientside'):
+                sess.set(key, val, clientside=True)
+            else:
+                sess[key] = val
             resp = Response('ok')
         elif action == 'get':
             key = req.path_info_pop()
@@ -88,9 +91,7 @@ class TestActions(TestCase):
 
     def setUp(self):
         self.backend = {}
-        client_keys = ['frodo', 'sam']
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend,
-                                        client_keys=client_keys)
+        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend)
         self.app = TestApp(wrapped_app)
 
     def test_getset_basic(self):
@@ -132,7 +133,7 @@ class TestActions(TestCase):
         resp = self.app.get('/has/frodo')
         resp.mustcontain('false')
 
-        resp = self.app.get('/set/frodo/ring')
+        resp = self.app.get('/set/frodo/ring?clientside=1')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
 
@@ -150,7 +151,7 @@ class TestActions(TestCase):
         self.assertEqual(self.backend.values(), [])
 
     def test_many(self):
-        resp = self.app.get('/set/frodo/baggins')
+        resp = self.app.get('/set/frodo/baggins?clientside=1')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
 
@@ -188,58 +189,3 @@ class TestActions(TestCase):
         utcnow = datetime.utcnow()
         self.assertLess(dt, utcnow)
         self.assertLess(utcnow - dt, timedelta(seconds=3))
-
-
-class TestMigrating(TestCase):
-
-    def test_client_to_server(self):
-        backend = {}
-        client_keys = ['frodo', 'sam']
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', backend,
-                                        client_keys=client_keys)
-        app = TestApp(wrapped_app)
-
-        app.get('/get/frodo', status=404)
-        resp = app.get('/set/frodo/tired')
-        resp.mustcontain('ok')
-        self.assertEqual(backend.values(), [])
-
-        resp = app.get('/get/frodo')
-        resp.mustcontain('tired')
-
-        orig_cookies = app.cookies
-        client_keys = ['sam']
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', backend,
-                                        client_keys=client_keys)
-        app = TestApp(wrapped_app)
-        app.cookies = orig_cookies
-
-        resp = app.get('/get/frodo')
-        resp.mustcontain('tired')
-        self.assertEqual(backend.values(), [{'frodo': 'tired'}])
-
-    def test_server_to_client(self):
-        backend = {}
-        client_keys = ['sam']
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', backend,
-                                        client_keys=client_keys)
-        app = TestApp(wrapped_app)
-
-        app.get('/get/frodo', status=404)
-        resp = app.get('/set/frodo/tired')
-        resp.mustcontain('ok')
-        self.assertEqual(backend.values(), [{'frodo': 'tired'}])
-
-        resp = app.get('/get/frodo')
-        resp.mustcontain('tired')
-
-        orig_cookies = app.cookies
-        client_keys = ['frodo', 'sam']
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', backend,
-                                        client_keys=client_keys)
-        app = TestApp(wrapped_app)
-        app.cookies = orig_cookies
-
-        resp = app.get('/get/frodo')
-        resp.mustcontain('tired')
-        self.assertEqual(backend.values(), [{}])
