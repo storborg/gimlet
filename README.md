@@ -63,7 +63,7 @@ The session data will automatically be persisted at the end of the request.
 A unique identifier for the session (also visible to the client) is available
 as ``session.id``.
 
-### Advanced Setup ###
+### Key Options ###
 
 Typical web applications tend to have a concentration of session access on a
 relatively small set of keys, with small values. For example, a common session
@@ -73,12 +73,43 @@ the session cookie. This substantially reduces the I/O load of the application
 as awhole, without limiting the session flexibility (particularly important for
 adapting legacy apps).
 
-To specify the keys that should be stored on the client, pass them as a
-sequence to the middleware constructor:
+To specify that a key should be stored on the client, pass the ``clientside=True`` argument:
 
-    app = SessionMiddleware(app, 's3krit', backend, client_keys=['user'])
+    session.set('cart_id', 12345, clientside=True)
 
-**SECURITY NOTE** Keys that are stored on the client side are not presently encrypted, it is possible for eavesdroppers or end users to view their contents. They are signed, however, so they cannot be modified without detection.
+**SECURITY NOTE** Keys that are stored on the client side are not presently
+encrypted, it is possible for eavesdroppers or end users to view their
+contents. They are signed, however, so they cannot be modified without
+detection.
+
+Keys can also be set as secure or not, and within secure keys, permanent or not. For example:
+
+    session.set('account_id', 777, secure=True, permanent=False)
+
+Or, combined:
+
+    session.set('cart_id', 12345, clientside=True, secure=True)
+
+### To Do ###
+
+Features that may be coming soon:
+
+- Further optimizations to reduce backend IO.
+- Allow and document specifying key options (secure, permanent, cientside) to
+  the ``session.get()`` method for performance and security benefits.
+- Encrypt client-side keys.
+- More straightforward middleware configuration.
+- Support setting defaults for key setting in the middleware configuration.
+- Support no-backend operation (clientside only).
+- More backends, possibly including SQL.
+- Make cookies HttpOnly.
+
+Test areas that still need work:
+
+- Ensure that secure/permanent keys are set correctly, and that cookies have
+  the right settings.
+- Ensure that changing key settings works as expected, and doesn't leave orphan
+  data.
 
 
 Code Standards
