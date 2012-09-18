@@ -97,7 +97,6 @@ Features that may be coming soon:
 - Further optimizations to reduce backend IO.
 - Encrypt client-side keys.
 - More straightforward middleware configuration.
-- Support setting defaults for key setting in the middleware configuration.
 - Support no-backend operation (clientside only).
 - More backends, possibly including SQL.
 - Properly support HTTPS--when trying to set a secure key inside a non-HTTPS
@@ -111,6 +110,7 @@ Possible:
 
 Test areas that still need work:
 
+- Setting defaults for key setting in the middleware configuration.
 - Ensure that secure/permanent keys are set correctly, and that cookies have
   the right settings, including HttpOnly.
 - Ensure that changing key settings works as expected, and doesn't leave orphan

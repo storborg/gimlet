@@ -13,10 +13,11 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 
 class Session(MutableMapping):
 
-    def __init__(self, channels):
+    def __init__(self, channels, defaults):
         self.insecure = channels['insecure']
         self.secure_nonperm = channels['secure_nonperm']
         self.secure_perm = channels['secure_perm']
+        self.defaults = defaults
 
     @property
     def id(self):
@@ -36,27 +37,42 @@ class Session(MutableMapping):
                 return channel.get(key)
         raise KeyError
 
-    def get(self, key, secure=False, permanent=False, clientside=False):
+    def _check_options(self, secure, permanent, clientside):
+        # If permanent is explicitly specified as False, ensure that secure is
+        # not explicitly set to False.
+        if (secure is False) and (permanent is False):
+            raise ValueError('setting non-secure non-permanent keys is not '
+                             'supported')
+
+        if secure is None:
+            secure = self.defaults['secure']
+        if permanent is None:
+            permanent = self.defaults['permanent']
+        if clientside is None:
+            clientside = self.defaults['clientside']
+
         channel = self.insecure
         if secure:
             if permanent:
                 channel = self.secure_perm
             else:
                 channel = self.secure_nonperm
+
+        return channel, clientside
+
+    def get(self, key, secure=None, permanent=None, clientside=None):
+        channel, clientside = self._check_options(secure, permanent,
+                                                  clientside)
         return channel.get(key, clientside=clientside)
 
     def __setitem__(self, key, val):
         return self.set(key, val)
 
-    def set(self, key, val, secure=False, permanent=False, clientside=False):
+    def set(self, key, val, secure=None, permanent=None, clientside=None):
         if key in self:
             del self[key]
-        channel = self.insecure
-        if secure:
-            if permanent:
-                channel = self.secure_perm
-            else:
-                channel = self.secure_nonperm
+        channel, clientside = self._check_options(secure, permanent,
+                                                  clientside)
         channel.set(key, val, clientside=clientside)
 
     def __delitem__(self, key):
@@ -188,13 +204,18 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 
 
 class SessionMiddleware(object):
-    def __init__(self, app, secret, backend,
-                 cookie_name='gimlet', environ_key='gimlet.session'):
+    def __init__(self, app, secret, backend, secure=False, permanent=False,
+                 clientside=False, cookie_name='gimlet',
+                 environ_key='gimlet.session'):
         self.app = app
         self.backend = backend
 
         self.cookie_name = cookie_name
         self.environ_key = environ_key
+
+        self.defaults = dict(secure=secure,
+                             permanent=permanent,
+                             clientside=clientside)
 
         self.serializer = URLSafeCookieSerializer(secret, backend)
 
@@ -248,7 +269,7 @@ class SessionMiddleware(object):
         for key in self.channel_names:
             channels[key] = self.read_channel(req, key)
 
-        req.environ[self.environ_key] = Session(channels)
+        req.environ[self.environ_key] = Session(channels, self.defaults)
 
         resp = req.get_response(self.app)
 

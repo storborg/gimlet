@@ -149,6 +149,10 @@ class TestActions(TestCase):
         resp.mustcontain('true')
         self.assertEqual(self.backend.values(), [{'foo': 'blah'}])
 
+    def test_insecure_nonpermanent_fails(self):
+        with self.assertRaises(ValueError):
+            self.app.get('/set/gimli?secure=0&permanent=0')
+
     def test_actions_client(self):
         self.app.get('/get/frodo', status=404)
         self.assertEqual(self.backend.values(), [])
