@@ -10,9 +10,9 @@ from gimlet import SessionMiddleware
 
 class SampleApp(object):
     """
-    This is a sample app which manipulates the session. It provides set, get,
-    has, and del methods which mimic the dict-like interface of the session and
-    allow actions against keys.
+    This is a sample app which manipulates the session. It provides URL actions
+    which mimic the dict-like interface of the session and allow actions
+    against keys.
 
     Hitting the URL /set/foo/bar will set foo=bar in the session and return
     'ok'.
@@ -21,76 +21,83 @@ class SampleApp(object):
 
     Getting a key which has not been set will return a 404.
     """
-
     def __call__(self, environ, start_response):
         req = Request(environ)
         sess = req.environ['gimlet.session']
-
         action = req.path_info_pop()
-
-        if action == '':
-            resp = Response('hello')
-        elif action == 'set':
-            key = req.path_info_pop()
-            val = req.path_info_pop()
-            if req.params:
-                sess.set(key, val,
-                         clientside=req.params.get('clientside'),
-                         secure=req.params.get('secure'),
-                         permanent=req.params.get('permanent'))
-            else:
-                sess[key] = val
-            resp = Response('ok')
-        elif action == 'get':
-            key = req.path_info_pop()
-            try:
-                val = sess[key]
-            except KeyError:
-                resp = HTTPNotFound('key %s not found' % key)
-            else:
-                resp = Response(str(val))
-        elif action == 'has':
-            key = req.path_info_pop()
-            if key in sess:
-                resp = Response('true')
-            else:
-                resp = Response('false')
-        elif action == 'is_secure':
-            key = req.path_info_pop()
-            resp = Response(str(sess.is_secure(key)))
-        elif action == 'is_permanent':
-            key = req.path_info_pop()
-            resp = Response(str(sess.is_permanent(key)))
-        elif action == 'del':
-            key = req.path_info_pop()
-            try:
-                del sess[key]
-            except KeyError:
-                resp = HTTPNotFound('key %s not found' % key)
-            else:
-                resp = Response('ok')
-        elif action == 'id':
-            resp = Response(str(sess.id))
-        elif action == 'time':
-            resp = Response(str(sess.created_time))
-        elif action == 'timestamp':
-            resp = Response(str(sess.created_timestamp))
-        elif action == 'len':
-            resp = Response(str(len(sess)))
-        elif action == 'iter':
-            resp = Response('\n'.join(iter(sess)))
-        elif action == 'getmany':
-            keys = req.path_info_pop().split('+')
-            vals = []
-            for key in keys:
-                try:
-                    vals.append(str(sess[key]))
-                except KeyError:
-                    vals.append('?')
-            resp = Response('\n'.join(vals))
-
+        resp = getattr(self, action)(req, sess)
         resp.content_type = 'text/plain'
         return resp(environ, start_response)
+
+    def set(self, req, sess):
+        key = req.path_info_pop()
+        val = req.path_info_pop()
+        if req.params:
+            sess.set(key, val,
+                     clientside=req.params.get('clientside'),
+                     secure=req.params.get('secure'),
+                     permanent=req.params.get('permanent'))
+        else:
+            sess[key] = val
+        return Response('ok')
+
+    def get(self, req, sess):
+        key = req.path_info_pop()
+        try:
+            val = sess[key]
+        except KeyError:
+            return HTTPNotFound('key %s not found' % key)
+        else:
+            return Response(str(val))
+
+    def has(self, req, sess):
+        key = req.path_info_pop()
+        if key in sess:
+            return Response('true')
+        else:
+            return Response('false')
+
+    def is_secure(self, req, sess):
+        key = req.path_info_pop()
+        return Response(str(sess.is_secure(key)))
+
+    def is_permanent(self, req, sess):
+        key = req.path_info_pop()
+        return Response(str(sess.is_permanent(key)))
+
+    def delete(self, req, sess):
+        key = req.path_info_pop()
+        try:
+            del sess[key]
+        except KeyError:
+            return HTTPNotFound('key %s not found' % key)
+        else:
+            return Response('ok')
+
+    def id(self, req, sess):
+        return Response(str(sess.id))
+
+    def time(self, req, sess):
+        return Response(str(sess.created_time))
+
+    def timestamp(self, req, sess):
+        return Response(str(sess.created_timestamp))
+
+    def len(self, req, sess):
+        return Response(str(len(sess)))
+
+    def iter(self, req, sess):
+        return Response('\n'.join(iter(sess)))
+
+    def getmany(self, req, sess):
+        keys = req.path_info_pop().split('+')
+        vals = []
+        for key in keys:
+            try:
+                vals.append(str(sess[key]))
+            except KeyError:
+                vals.append('?')
+        return Response('\n'.join(vals))
 
 
 inner_app = SampleApp()
@@ -115,7 +122,7 @@ class TestActions(TestCase):
         resp.mustcontain('bar')
         self.assertEqual(self.backend.values(), [{'foo': 'bar'}])
 
-        resp = self.app.get('/del/foo')
+        resp = self.app.get('/delete/foo')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [{}])
 
@@ -146,7 +153,7 @@ class TestActions(TestCase):
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
 
-        self.app.get('/del/boromir', status=404)
+        self.app.get('/delete/boromir', status=404)
 
         resp = self.app.get('/set/boromir/111?clientside=1&secure=1')
         resp.mustcontain('ok')
@@ -184,7 +191,7 @@ class TestActions(TestCase):
         resp = self.app.get('/has/frodo')
         resp.mustcontain('true')
 
-        resp = self.app.get('/del/frodo')
+        resp = self.app.get('/delete/frodo')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
 
