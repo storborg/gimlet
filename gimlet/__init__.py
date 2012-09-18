@@ -36,8 +36,28 @@ class Session(MutableMapping):
                 return channel.get(key)
         raise KeyError
 
+    def get(self, key, secure=False, permanent=False, clientside=False):
+        channel = self.insecure
+        if secure:
+            if permanent:
+                channel = self.secure_perm
+            else:
+                channel = self.secure_nonperm
+        return channel.get(key, clientside=clientside)
+
     def __setitem__(self, key, val):
         return self.set(key, val)
+
+    def set(self, key, val, secure=False, permanent=False, clientside=False):
+        if key in self:
+            del self[key]
+        channel = self.insecure
+        if secure:
+            if permanent:
+                channel = self.secure_perm
+            else:
+                channel = self.secure_nonperm
+        channel.set(key, val, clientside=clientside)
 
     def __delitem__(self, key):
         if key not in self:
@@ -59,17 +79,6 @@ class Session(MutableMapping):
         return (len(self.insecure) +
                 len(self.secure_nonperm) +
                 len(self.secure_perm))
-
-    def set(self, key, val, secure=False, permanent=False, clientside=False):
-        if key in self:
-            del self[key]
-        channel = self.insecure
-        if secure:
-            if permanent:
-                channel = self.secure_perm
-            else:
-                channel = self.secure_nonperm
-        channel.set(key, val, clientside=clientside)
 
     def is_permanent(self, key):
         return (key in self.secure_perm) or (key in self.insecure)
@@ -119,7 +128,7 @@ class SessionChannel(object):
         return len(self.backend_data) + len(self.client_data)
 
     def get(self, key, clientside=None):
-        if (key in self.client_data) or clientside:
+        if ((clientside is None) and (key in self.client_data)) or clientside:
             return self.client_data[key]
         else:
             self.backend_read()

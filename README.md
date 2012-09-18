@@ -95,8 +95,6 @@ Or, combined:
 Features that may be coming soon:
 
 - Further optimizations to reduce backend IO.
-- Allow and document specifying key options (secure, permanent, cientside) to
-  the ``session.get()`` method for performance and security benefits.
 - Encrypt client-side keys.
 - More straightforward middleware configuration.
 - Support setting defaults for key setting in the middleware configuration.

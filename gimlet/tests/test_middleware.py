@@ -25,6 +25,7 @@ class SampleApp(object):
         req = Request(environ)
         sess = req.environ['gimlet.session']
         action = req.path_info_pop()
+        req.settings = {k: bool(int(v)) for k, v in req.params.items()}
         resp = getattr(self, action)(req, sess)
         resp.content_type = 'text/plain'
         return resp(environ, start_response)
@@ -34,9 +35,9 @@ class SampleApp(object):
         val = req.path_info_pop()
         if req.params:
             sess.set(key, val,
-                     clientside=req.params.get('clientside'),
-                     secure=req.params.get('secure'),
-                     permanent=req.params.get('permanent'))
+                     clientside=req.settings.get('clientside'),
+                     secure=req.settings.get('secure'),
+                     permanent=req.settings.get('permanent'))
         else:
             sess[key] = val
         return Response('ok')
@@ -44,7 +45,13 @@ class SampleApp(object):
     def get(self, req, sess):
         key = req.path_info_pop()
         try:
-            val = sess[key]
+            if req.params:
+                val = sess.get(key,
+                               clientside=req.settings.get('clientside'),
+                               secure=req.settings.get('secure'),
+                               permanent=req.settings.get('permanent'))
+            else:
+                val = sess[key]
         except KeyError:
             return HTTPNotFound('key %s not found' % key)
         else:
@@ -161,6 +168,10 @@ class TestActions(TestCase):
 
         resp = self.app.get('/get/boromir')
         resp.mustcontain('111')
+
+        self.app.get('/get/boromir?secure=0', status=404)
+        self.app.get('/get/boromir?secure=1&permanent=1', status=404)
+        self.app.get('/get/boromir?secure=1&clientside=0', status=404)
 
         resp = self.app.get('/is_secure/boromir')
         resp.mustcontain('True')
