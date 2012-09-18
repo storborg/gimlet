@@ -252,3 +252,27 @@ class TestActions(TestCase):
         utcnow = datetime.utcnow()
         self.assertLess(dt, utcnow)
         self.assertLess(utcnow - dt, timedelta(seconds=3))
+
+
+class TestNoBackend(TestCase):
+
+    def setUp(self):
+        self.inner_app = inner_app
+        wrapped_app = SessionMiddleware(inner_app, 's3krit')
+        self.app = TestApp(wrapped_app)
+
+    def test_getset_basic(self):
+        self.app.get('/get/foo', status=404)
+
+        resp = self.app.get('/set/foo/bar')
+        resp.mustcontain('ok')
+
+        resp = self.app.get('/get/foo')
+        resp.mustcontain('bar')
+
+        with self.assertRaises(ValueError):
+            self.app.get('/set/quux?clientside=0')
+
+    def test_bad_middleware_config(self):
+        with self.assertRaises(ValueError):
+            SessionMiddleware(self.inner_app, 's3krit', clientside=False)

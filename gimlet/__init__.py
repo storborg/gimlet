@@ -16,6 +16,8 @@ class Session(MutableMapping):
     def __init__(self, channels, defaults):
         self.channels = channels
         self.defaults = defaults
+        self.has_backend = all((ch.backend is not None) for ch in
+                               self.channels.values())
 
     @property
     def id(self):
@@ -31,8 +33,10 @@ class Session(MutableMapping):
 
     def __getitem__(self, key):
         for channel in self.channels.values():
-            if key in channel:
+            try:
                 return channel.get(key)
+            except KeyError:
+                pass
         raise KeyError
 
     def _check_options(self, secure, permanent, clientside):
@@ -41,6 +45,12 @@ class Session(MutableMapping):
         if (secure is False) and (permanent is False):
             raise ValueError('setting non-secure non-permanent keys is not '
                              'supported')
+
+        # If no backend is present, don't allow explicitly setting a key as
+        # non-clientside.
+        if (not self.has_backend) and (clientside is False):
+            raise ValueError('setting a non-clientside key with no backend '
+                             'present is not supported')
 
         if secure is None:
             secure = self.defaults['secure']
@@ -116,7 +126,7 @@ class SessionChannel(object):
         self.backend_loaded = False
 
     def backend_read(self):
-        if not self.backend_loaded:
+        if (not self.backend_loaded) and (self.backend is not None):
             try:
                 self.backend_data = self.backend[self.id]
             except KeyError:
@@ -199,11 +209,19 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 
 
 class SessionMiddleware(object):
-    def __init__(self, app, secret, backend, secure=False, permanent=False,
-                 clientside=False, cookie_name='gimlet',
+    def __init__(self, app, secret, backend=None, secure=False,
+                 permanent=False, clientside=None, cookie_name='gimlet',
                  environ_key='gimlet.session'):
         self.app = app
         self.backend = backend
+
+        if backend is None:
+            if clientside is False:
+                raise ValueError('cannot configure middleware default of '
+                                 'clientside=False with no backend present')
+            clientside = True
+        else:
+            clientside = bool(clientside)
 
         self.cookie_name = cookie_name
         self.environ_key = environ_key
