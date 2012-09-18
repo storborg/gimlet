@@ -27,7 +27,6 @@ Limitations
 Currently NOT supported:
 
 * Server-side expiration
-* Entirely client-side sessions
 * Cookie encryption (clients will be able to read your session data, but not
   modify it)
 
