@@ -94,11 +94,12 @@ Or, combined:
 Features that may be coming soon:
 
 - Further optimizations to reduce backend IO.
-- Encrypt client-side keys.
-- More straightforward middleware configuration.
+- Support encryption of client-side keys (also ID and created_time?).
 - More backends, possibly including SQL.
 - Properly support HTTPS--when trying to set a secure key inside a non-HTTPS
   context, throw an exception.
+- Offer a 'fake security' mode for doing development on a stack which will be
+  deployed in an HTTPS environment.
 
 Possible:
 
