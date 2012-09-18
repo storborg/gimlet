@@ -119,14 +119,12 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 
 class SessionMiddleware(object):
     def __init__(self, app, secret, backend,
-                 cookie_name='gimlet', environ_key='gimlet.session',
-                 secure=True):
+                 cookie_name='gimlet', environ_key='gimlet.session'):
         self.app = app
         self.backend = backend
 
         self.cookie_name = cookie_name
         self.environ_key = environ_key
-        self.secure = secure
 
         self.serializer = URLSafeCookieSerializer(secret, backend)
 
