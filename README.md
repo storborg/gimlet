@@ -101,12 +101,6 @@ Features that may be coming soon:
 - Offer a 'fake security' mode for doing development on a stack which will be
   deployed in an HTTPS environment.
 
-Possible:
-
-- Add mechanism to manually save outside of the end of a WSGI request cycle?
-  E.g. for deferred operations that happen after consuming a returned
-  generator.
-
 Test areas that still need work:
 
 - Setting defaults for key setting in the middleware configuration.

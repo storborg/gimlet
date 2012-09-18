@@ -14,6 +14,7 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 class Session(MutableMapping):
 
     def __init__(self, channels, defaults):
+        self.flushed = False
         self.channels = channels
         self.defaults = defaults
         self.has_backend = all((ch.backend is not None) for ch in
@@ -59,6 +60,10 @@ class Session(MutableMapping):
         if clientside is None:
             clientside = self.defaults['clientside']
 
+        if self.flushed and clientside:
+            raise ValueError('clientside keys cannot be set after the WSGI '
+                             'response has been returned')
+
         channel_key = 'insecure'
         if secure:
             if permanent:
@@ -82,6 +87,11 @@ class Session(MutableMapping):
         channel, clientside = self._check_options(secure, permanent,
                                                   clientside)
         channel.set(key, val, clientside=clientside)
+
+        # If the response has already been flushed, we need to explicitly
+        # persist this set to the backend.
+        if self.flushed:
+            channel.backend_write()
 
     def __delitem__(self, key):
         if key not in self:
@@ -282,9 +292,11 @@ class SessionMiddleware(object):
         for key in self.channel_names:
             channels[key] = self.read_channel(req, key)
 
-        req.environ[self.environ_key] = Session(channels, self.defaults)
+        sess = req.environ[self.environ_key] = Session(channels, self.defaults)
 
         resp = req.get_response(self.app)
+
+        sess.flushed = True
 
         for key in self.channel_names:
             self.write_channel(resp, key, channels[key])
