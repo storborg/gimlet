@@ -234,7 +234,7 @@ class SessionMiddleware(object):
         # - the cookie is fresh AND data has been changed on the backend
         if channel.client_dirty or channel.fresh:
             resp.set_cookie(name, self.serializer.dumps(channel),
-                            **self.channel_opts[key])
+                            httponly=True, **self.channel_opts[key])
 
         # Write to the backend IFF the following conditions:
         # - data has been changed on the backend
