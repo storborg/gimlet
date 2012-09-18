@@ -33,8 +33,11 @@ class SampleApp(object):
         elif action == 'set':
             key = req.path_info_pop()
             val = req.path_info_pop()
-            if req.params.get('clientside'):
-                sess.set(key, val, clientside=True)
+            if req.params:
+                sess.set(key, val,
+                         clientside=req.params.get('clientside'),
+                         secure=req.params.get('secure'),
+                         permanent=req.params.get('permanent'))
             else:
                 sess[key] = val
             resp = Response('ok')
@@ -136,6 +139,29 @@ class TestActions(TestCase):
         resp = self.app.get('/set/frodo/ring?clientside=1')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
+
+        self.app.get('/del/boromir', status=404)
+
+        resp = self.app.get('/set/boromir/111?clientside=1&secure=1')
+        resp.mustcontain('ok')
+        self.assertEqual(self.backend.values(), [])
+
+        resp = self.app.get('/get/boromir')
+        resp.mustcontain('111')
+
+        resp = self.app.get('/set/boromir/333?clientside=1&secure=0')
+        resp.mustcontain('ok')
+
+        resp = self.app.get(
+            '/set/faramir/222?clientside=1&secure=1&permanent=1')
+        resp.mustcontain('ok')
+        self.assertEqual(self.backend.values(), [])
+
+        resp = self.app.get('/get/boromir')
+        resp.mustcontain('333')
+
+        resp = self.app.get('/get/faramir')
+        resp.mustcontain('222')
 
         resp = self.app.get('/get/frodo')
         resp.mustcontain('ring')

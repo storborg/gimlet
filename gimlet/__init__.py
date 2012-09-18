@@ -13,6 +13,67 @@ from itsdangerous import Serializer, URLSafeSerializerMixin
 
 class Session(MutableMapping):
 
+    def __init__(self, channels):
+        self.insecure = channels['insecure']
+        self.secure_nonperm = channels['secure_nonperm']
+        self.secure_perm = channels['secure_perm']
+
+    @property
+    def id(self):
+        return self.insecure.id
+
+    @property
+    def created_timestamp(self):
+        return self.insecure.created_timestamp
+
+    @property
+    def created_time(self):
+        return self.insecure.created_time
+
+    def __getitem__(self, key):
+        for channel in [self.insecure, self.secure_nonperm, self.secure_perm]:
+            if key in channel:
+                return channel.get(key)
+        raise KeyError
+
+    def __setitem__(self, key, val):
+        return self.set(key, val)
+
+    def __delitem__(self, key):
+        if key not in self:
+            raise KeyError
+        for channel in [self.insecure, self.secure_nonperm, self.secure_perm]:
+            if key in channel:
+                channel.delete(key)
+
+    def __contains__(self, key):
+        return any((key in channel) for channel in
+                   [self.insecure, self.secure_nonperm, self.secure_perm])
+
+    def __iter__(self):
+        return itertools.chain(iter(self.insecure),
+                               iter(self.secure_nonperm),
+                               iter(self.secure_perm))
+
+    def __len__(self):
+        return (len(self.insecure) +
+                len(self.secure_nonperm) +
+                len(self.secure_perm))
+
+    def set(self, key, val, secure=False, permanent=False, clientside=False):
+        if key in self:
+            del self[key]
+        channel = self.insecure
+        if secure:
+            if permanent:
+                channel = self.secure_perm
+            else:
+                channel = self.secure_nonperm
+        channel.set(key, val, clientside=clientside)
+
+
+class SessionChannel(object):
+
     def __init__(self, id, created_timestamp, backend, fresh,
                  client_data=None):
         self.dirty_keys = set()
@@ -51,18 +112,12 @@ class Session(MutableMapping):
         self.backend_read()
         return len(self.backend_data) + len(self.client_data)
 
-    def __getitem__(self, key):
-        return self.get(key)
-
     def get(self, key, clientside=None):
         if (key in self.client_data) or clientside:
             return self.client_data[key]
         else:
             self.backend_read()
             return self.backend_data[key]
-
-    def __setitem__(self, key, value):
-        return self.set(key, value)
 
     def set(self, key, value, clientside=None):
         if clientside:
@@ -72,7 +127,7 @@ class Session(MutableMapping):
             self.backend_data[key] = value
             self.backend_dirty = True
 
-    def __delitem__(self, key):
+    def delete(self, key):
         if key in self.client_data:
             del self.client_data[key]
             self.client_dirty = True
@@ -91,7 +146,7 @@ class CookieSerializer(Serializer):
 
     def load_payload(self, payload):
         """
-        Convert a cookie into a Session instance.
+        Convert a cookie into a SessionChannel instance.
         """
         raw_id, created_timestamp = \
             self.packer.unpack(payload[:self.packer.size])
@@ -99,17 +154,17 @@ class CookieSerializer(Serializer):
 
         id = raw_id.encode('hex')
         client_data = pickle.loads(client_data_pkl)
-        return Session(id, created_timestamp, self.backend,
-                       fresh=False, client_data=client_data)
+        return SessionChannel(id, created_timestamp, self.backend,
+                              fresh=False, client_data=client_data)
 
-    def dump_payload(self, sess):
+    def dump_payload(self, channel):
         """
         Convert a Session instance into a cookie by packing it precisely into a
         string.
         """
-        client_data_pkl = pickle.dumps(sess.client_data)
-        raw_id = sess.id.decode('hex')
-        return (self.packer.pack(raw_id, sess.created_timestamp) +
+        client_data_pkl = pickle.dumps(channel.client_data)
+        raw_id = channel.id.decode('hex')
+        return (self.packer.pack(raw_id, channel.created_timestamp) +
                 client_data_pkl)
 
 
@@ -128,35 +183,61 @@ class SessionMiddleware(object):
 
         self.serializer = URLSafeCookieSerializer(secret, backend)
 
+        self.channel_names = {
+            'insecure': self.cookie_name,
+            'secure_perm': self.cookie_name + '-sp',
+            'secure_nonperm': self.cookie_name + '-sn'
+        }
+
+        self.channel_opts = {
+            'insecure': {},
+            'secure_perm': dict(secure=True),
+            'secure_nonperm': dict(secure=True, max_age=0)
+        }
+
     def make_session_id(self):
         return os.urandom(16).encode('hex')
 
-    def new_session(self):
+    def new_session_channel(self):
         id = self.make_session_id()
-        return Session(id, int(time.time()), self.backend, fresh=True)
+        return SessionChannel(id, int(time.time()), self.backend, fresh=True)
 
-    def __call__(self, environ, start_response):
-        req = Request(environ)
-
-        if self.cookie_name in req.cookies:
-            sess = self.serializer.loads(req.cookies[self.cookie_name])
+    def read_channel(self, req, key):
+        name = self.channel_names[key]
+        if name in req.cookies:
+            sc = self.serializer.loads(req.cookies[name])
         else:
-            sess = self.new_session()
+            sc = self.new_session_channel()
+        return sc
 
-        req.environ[self.environ_key] = sess
-
-        resp = req.get_response(self.app)
+    def write_channel(self, resp, key, channel):
+        name = self.channel_names[key]
 
         # Set a cookie IFF the following conditions:
         # - data has been changed on the client
         # OR
         # - the cookie is fresh AND data has been changed on the backend
-        if sess.client_dirty or (sess.fresh and sess.backend_dirty):
-            resp.set_cookie(self.cookie_name, self.serializer.dumps(sess))
+        if channel.client_dirty or (channel.fresh and channel.backend_dirty):
+            resp.set_cookie(name, self.serializer.dumps(channel),
+                            **self.channel_opts[key])
 
         # Write to the backend IFF the following conditions:
         # - data has been changed on the backend
-        if sess.backend_dirty:
-            sess.backend_write()
+        if channel.backend_dirty:
+            channel.backend_write()
+
+    def __call__(self, environ, start_response):
+        req = Request(environ)
+
+        channels = {}
+        for key in self.channel_names:
+            channels[key] = self.read_channel(req, key)
+
+        req.environ[self.environ_key] = Session(channels)
+
+        resp = req.get_response(self.app)
+
+        for key in self.channel_names:
+            self.write_channel(resp, key, channels[key])
 
         return resp(environ, start_response)
