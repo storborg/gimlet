@@ -106,6 +106,9 @@ class SampleApp(object):
                 vals.append('?')
         return Response('\n'.join(vals))
 
+    def repr(self, req, sess):
+        return Response(repr(sess))
+
 
 inner_app = SampleApp()
 
@@ -213,6 +216,10 @@ class TestActions(TestCase):
 
         self.app.get('/get/frodo', status=404)
         self.assertEqual(self.backend.values(), [])
+
+        resp = self.app.get('/repr')
+        resp.mustcontain("u'boromir': u'333'")
+        resp.mustcontain("u'faramir': u'222'")
 
     def test_many(self):
         resp = self.app.get('/set/frodo/baggins?clientside=1')

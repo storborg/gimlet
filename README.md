@@ -96,8 +96,6 @@ Features that may be coming soon:
 
 - Further optimizations to reduce backend IO.
 - More backends, possibly including SQL.
-- Make a better repr() which shows which channels keys are set in, for use in
-  error emails.
 
 Test areas that still need work:
 

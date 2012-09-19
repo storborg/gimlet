@@ -122,6 +122,10 @@ class Session(MutableMapping):
         return ((key in self.channels['secure_nonperm']) or
                 (key in self.channels['secure_perm']))
 
+    def __repr__(self):
+        keys = '\n'.join(["-- %s --\n%r" % (k, v) for k, v in
+                          self.channels.iteritems()])
+        return "<Session \n%s\n>" % keys
 
 class SessionChannel(object):
 
@@ -186,6 +190,12 @@ class SessionChannel(object):
             self.backend_read()
             del self.backend_data[key]
             self.backend_dirty = True
+
+    def __repr__(self):
+        self.backend_read()
+        return ("id %s\ncreated %s\nbackend %r\nclient %r" %
+                (self.id, self.created_time, self.backend_data,
+                 self.client_data))
 
 
 class CookieSerializer(Serializer):
