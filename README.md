@@ -27,8 +27,6 @@ Limitations
 Currently NOT supported:
 
 * Server-side expiration
-* Cookie encryption (clients will be able to read your session data, but not
-  modify it)
 
 
 Installation
@@ -77,10 +75,7 @@ To specify that a key should be stored on the client, pass the
 
     session.set('cart_id', 12345, clientside=True)
 
-**SECURITY NOTE** Keys that are stored on the client side are not presently
-encrypted, it is possible for eavesdroppers or end users to view their
-contents. They are signed, however, so they cannot be modified without
-detection.
+**SECURITY NOTE** Keys that are stored on the client side are not encrypted by default, so it will be possible for eavesdroppers or end users to view their contents. THey are signed, however, so they cannot be modified without detection. To enable encryption of cookies, supply a random 32-byte bytestring as the ``encryption_key`` argument to ``SessionMiddleware``.
 
 Keys can also be set as secure or not, and within secure keys, permanent or
 not. For example:
@@ -96,7 +91,6 @@ Or, combined:
 Features that may be coming soon:
 
 - Further optimizations to reduce backend IO.
-- Support encryption of client-side keys (also ID and created_time?).
 - More backends, possibly including SQL.
 - Properly support HTTPS--when trying to set a secure key inside a non-HTTPS
   context, throw an exception.

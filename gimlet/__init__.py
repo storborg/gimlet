@@ -10,6 +10,8 @@ from collections import MutableMapping
 from webob import Request
 from itsdangerous import Serializer, URLSafeSerializerMixin
 
+from .crypto import Crypter
+
 
 class Session(MutableMapping):
 
@@ -186,14 +188,18 @@ class SessionChannel(object):
 class CookieSerializer(Serializer):
     packer = Struct('16si')
 
-    def __init__(self, secret, backend):
+    def __init__(self, secret, backend, crypter):
         Serializer.__init__(self, secret)
         self.backend = backend
+        self.crypter = crypter
 
     def load_payload(self, payload):
         """
         Convert a cookie into a SessionChannel instance.
         """
+        if self.crypter:
+            payload = self.crypter.decrypt(payload)
+
         raw_id, created_timestamp = \
             self.packer.unpack(payload[:self.packer.size])
         client_data_pkl = payload[self.packer.size:]
@@ -210,8 +216,13 @@ class CookieSerializer(Serializer):
         """
         client_data_pkl = pickle.dumps(channel.client_data)
         raw_id = channel.id.decode('hex')
-        return (self.packer.pack(raw_id, channel.created_timestamp) +
-                client_data_pkl)
+        payload = (self.packer.pack(raw_id, channel.created_timestamp) +
+                   client_data_pkl)
+
+        if self.crypter:
+            payload = self.crypter.encrypt(payload)
+
+        return payload
 
 
 class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
@@ -219,7 +230,7 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 
 
 class SessionMiddleware(object):
-    def __init__(self, app, secret, backend=None,
+    def __init__(self, app, secret, backend=None, encryption_key=None,
                  cookie_name='gimlet', environ_key='gimlet.session',
                  secure=False, permanent=False, clientside=None):
         self.app = app
@@ -240,7 +251,12 @@ class SessionMiddleware(object):
                              permanent=permanent,
                              clientside=clientside)
 
-        self.serializer = URLSafeCookieSerializer(secret, backend)
+        if encryption_key:
+            crypter = Crypter(encryption_key)
+        else:
+            crypter = None
+
+        self.serializer = URLSafeCookieSerializer(secret, backend, crypter)
 
         self.channel_names = {
             'insecure': self.cookie_name,

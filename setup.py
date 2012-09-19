@@ -15,6 +15,8 @@ setup(name="gimlet",
       install_requires=[
           'itsdangerous',
           'webob',
+          # Required for cookie encryption.
+          'pycrypto',
           # These are for tests.
           'coverage',
           'nose>=1.1',
