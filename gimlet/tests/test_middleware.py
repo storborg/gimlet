@@ -114,7 +114,8 @@ class TestActions(TestCase):
 
     def setUp(self):
         self.backend = {}
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend)
+        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend,
+                                        fake_https=True)
         self.app = TestApp(wrapped_app)
 
     def test_getset_basic(self):
@@ -276,3 +277,23 @@ class TestNoBackend(TestCase):
     def test_bad_middleware_config(self):
         with self.assertRaises(ValueError):
             SessionMiddleware(self.inner_app, 's3krit', clientside=False)
+
+
+class TestSecureSet(TestCase):
+
+    def setUp(self):
+        wrapped_app = SessionMiddleware(inner_app, 's3krit')
+        self.app = TestApp(wrapped_app)
+
+    def test_secure_set_on_http(self):
+        with self.assertRaises(ValueError):
+            self.app.get('/set/foo/bar?secure=1')
+
+    def test_secure_set_on_https(self):
+        resp = self.app.get('https://localhost/set/uruk/hai?secure=1')
+        resp.mustcontain('ok')
+
+        self.app.get('/get/uruk', status=404)
+
+        resp = self.app.get('https://localhost/get/uruk')
+        resp.mustcontain('hai')

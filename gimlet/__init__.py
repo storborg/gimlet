@@ -68,6 +68,9 @@ class Session(MutableMapping):
 
         channel_key = 'insecure'
         if secure:
+            if 'secure_perm' not in self.channels:
+                raise ValueError('cannot set a secure key outside of https '
+                                 'context, unless fake_https is used.')
             if permanent:
                 channel_key = 'secure_perm'
             else:
@@ -232,7 +235,8 @@ class URLSafeCookieSerializer(URLSafeSerializerMixin, CookieSerializer):
 class SessionMiddleware(object):
     def __init__(self, app, secret, backend=None, encryption_key=None,
                  cookie_name='gimlet', environ_key='gimlet.session',
-                 secure=False, permanent=False, clientside=None):
+                 secure=False, permanent=False, clientside=None,
+                 fake_https=False):
         self.app = app
         self.backend = backend
 
@@ -266,8 +270,8 @@ class SessionMiddleware(object):
 
         self.channel_opts = {
             'insecure': {},
-            'secure_perm': dict(secure=True),
-            'secure_nonperm': dict(secure=True, max_age=0)
+            'secure_perm': dict(secure=(not fake_https)),
+            'secure_nonperm': dict(secure=(not fake_https), max_age=0)
         }
 
     def make_session_id(self):
@@ -306,7 +310,9 @@ class SessionMiddleware(object):
 
         channels = {}
         for key in self.channel_names:
-            channels[key] = self.read_channel(req, key)
+            if (not self.channel_opts[key].get('secure') or
+                    req.scheme == 'https'):
+                channels[key] = self.read_channel(req, key)
 
         sess = req.environ[self.environ_key] = Session(channels, self.defaults)
 
@@ -314,7 +320,7 @@ class SessionMiddleware(object):
 
         sess.flushed = True
 
-        for key in self.channel_names:
+        for key in channels:
             self.write_channel(resp, key, channels[key])
 
         return resp(environ, start_response)
