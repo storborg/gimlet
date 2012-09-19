@@ -20,7 +20,7 @@ inner_app = SampleApp()
 class TestEncryptedSession(TestCase):
     def setUp(self):
         self.inner_app = inner_app
-        test_key = os.urandom(32)
+        test_key = os.urandom(32).encode('hex')
         wrapped_app = SessionMiddleware(inner_app, 's3krit',
                                         encryption_key=test_key)
         self.app = TestApp(wrapped_app)
@@ -39,7 +39,13 @@ class TestEncryptedSession(TestCase):
             self.app.get('/set/quux?clientside=0')
 
     @skipUnless(encryption_available, "pycrypto not available")
-    def test_bad_middleware_config(self):
+    def test_wrong_key_length(self):
         with self.assertRaises(ValueError):
             SessionMiddleware(self.inner_app, 's3krit',
-                              encryption_key=os.urandom(20))
+                              encryption_key=os.urandom(20).encode('hex'))
+
+    @skipUnless(encryption_available, "pycrypto not available")
+    def test_non_hex_key(self):
+        with self.assertRaises(ValueError):
+            SessionMiddleware(self.inner_app, 's3krit',
+                              encryption_key=('s' * 64))
