@@ -72,7 +72,8 @@ the session cookie. This substantially reduces the I/O load of the application
 as awhole, without limiting the session flexibility (particularly important for
 adapting legacy apps).
 
-To specify that a key should be stored on the client, pass the ``clientside=True`` argument:
+To specify that a key should be stored on the client, pass the
+``clientside=True`` argument:
 
     session.set('cart_id', 12345, clientside=True)
 
@@ -81,7 +82,8 @@ encrypted, it is possible for eavesdroppers or end users to view their
 contents. They are signed, however, so they cannot be modified without
 detection.
 
-Keys can also be set as secure or not, and within secure keys, permanent or not. For example:
+Keys can also be set as secure or not, and within secure keys, permanent or
+not. For example:
 
     session.set('account_id', 777, secure=True, permanent=False)
 
@@ -100,6 +102,8 @@ Features that may be coming soon:
   context, throw an exception.
 - Offer a 'fake security' mode for doing development on a stack which will be
   deployed in an HTTPS environment.
+- Make a better repr() which shows which channels keys are set in, for use in
+  error emails.
 
 Test areas that still need work:
 
@@ -124,7 +128,7 @@ There are no [PEP8](http://www.python.org/dev/peps/pep-0008/) or
 verify that:
 
     $ pip install pep8 pyflakes
-    $ pep8 -r .
+    $ pep8 .
     $ pyflakes .
 
 Any pull requests must maintain the sanctity of these three pillars.
