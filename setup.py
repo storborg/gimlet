@@ -3,13 +3,17 @@ from setuptools import setup
 
 setup(name="gimlet",
       version='0.1',
-      description='',
+      description='Simple High-Performance WSGI Sessions',
       long_description='',
       classifiers=[
           'License :: OSI Approved :: MIT License',
           'Programming Language :: Python :: 2.7',
+          'Development Status :: 3 - Alpha',
+          'Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware',
+          'Topic :: Internet :: WWW/HTTP :: Session',
       ],
-      keywords='',
+      keywords='wsgi sessions middleware beaker cookie',
+      url='http://github.com/storborg/gimlet',
       author='Scott Torborg',
       author_email='scott@cartlogic.com',
       install_requires=[
