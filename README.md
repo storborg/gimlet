@@ -94,16 +94,11 @@ Or, combined:
 
 Features that may be coming soon:
 
-- Further optimizations to reduce backend IO.
-- More backends, possibly including SQL.
+- SQL backend.
 
 Test areas that still need work:
 
 - Setting defaults for key setting in the middleware configuration.
-- Ensure that secure/permanent keys are set correctly, and that cookies have
-  the right settings, including HttpOnly.
-- Ensure that changing key settings works as expected, and doesn't leave orphan
-  data.
 
 
 Code Standards
