@@ -115,12 +115,12 @@ class Session(MutableMapping):
         return sum([len(ch) for ch in self.channels.values()])
 
     def is_permanent(self, key):
-        return ((key in self.channels['secure_perm']) or
+        return ((key in self.channels.get('secure_perm', {})) or
                 (key in self.channels['insecure']))
 
     def is_secure(self, key):
-        return ((key in self.channels['secure_nonperm']) or
-                (key in self.channels['secure_perm']))
+        return ((key in self.channels.get('secure_nonperm', {})) or
+                (key in self.channels.get('secure_perm', {})))
 
     def __repr__(self):
         keys = '\n'.join(["-- %s --\n%r" % (k, v) for k, v in
