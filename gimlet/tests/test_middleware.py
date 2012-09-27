@@ -242,7 +242,8 @@ class TestActions(TestCase):
         resp.mustcontain('bar')
 
     def test_set_clientside_secure(self):
-        resp = self.app.get('https://localhost/set/foo/bar?clientside=1&secure=1')
+        resp = self.app.get(
+            'https://localhost/set/foo/bar?clientside=1&secure=1')
         resp.mustcontain('ok')
         self.assertEqual(self.backend.values(), [])
 
@@ -327,8 +328,10 @@ class TestActions(TestCase):
     def test_repr(self):
         self.app.get('/set/frodo/baggins')
         self.app.get('https://localhost/set/meriadoc/brandybuck?secure=1')
-        self.app.get('https://localhost/set/samwise/gamgee?secure=1&permanent=1')
-        self.app.get('https://localhost/set/peregrin/took?secure=1&clientside=1')
+        self.app.get(
+            'https://localhost/set/samwise/gamgee?secure=1&permanent=1')
+        self.app.get(
+            'https://localhost/set/peregrin/took?secure=1&clientside=1')
 
         resp = self.app.get('https://localhost/repr')
         resp.mustcontain('frodo')

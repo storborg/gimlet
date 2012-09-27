@@ -127,6 +127,7 @@ class Session(MutableMapping):
                           self.channels.iteritems()])
         return "<Session \n%s\n>" % keys
 
+
 class SessionChannel(object):
 
     def __init__(self, id, created_timestamp, backend, fresh,
