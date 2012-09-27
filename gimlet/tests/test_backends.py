@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from gimlet.backends import RedisBackend, MemcacheBackend
+from gimlet.backends.pyredis import RedisBackend
+from gimlet.backends.memcache import MemcacheBackend
 
 
 class TestBackendClass(TestCase):
