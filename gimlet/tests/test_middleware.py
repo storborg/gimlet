@@ -195,8 +195,9 @@ class TestActions(TestCase):
         resp = self.app.get('https://localhost/is_permanent/tree')
         resp.mustcontain('True')
 
-        self.app.get('https://localhost/get/tree?secure=1&permanent=0',
-                     status=404)
+        resp = self.app.get('https://localhost/get/tree?secure=1&permanent=0')
+        self.assertEqual(resp.body, 'None')
+
         resp = self.app.get('https://localhost/get/tree?secure=1&permanent=1')
         resp.mustcontain('beard')
 
@@ -207,7 +208,8 @@ class TestActions(TestCase):
 
         self.assertEqual(set(channel_keys), set(['uruk', 'tree']))
 
-        self.app.get('https://localhost/get/uruk?secure=0', status=404)
+        resp = self.app.get('https://localhost/get/uruk?secure=0')
+        self.assertEqual(resp.body, 'None')
 
     def test_set_insecure_nonpermanent_fails(self):
         with self.assertRaises(ValueError):

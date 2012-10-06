@@ -78,10 +78,14 @@ class Session(MutableMapping):
 
         return self.channels[channel_key], clientside
 
-    def get(self, key, secure=None, permanent=None, clientside=None):
+    def get(self, key, default=None,
+            secure=None, permanent=None, clientside=None):
         channel, clientside = self._check_options(secure, permanent,
                                                   clientside)
-        return channel.get(key, clientside=clientside)
+        try:
+            return channel.get(key, clientside=clientside)
+        except KeyError:
+            return default
 
     def __setitem__(self, key, val):
         return self.set(key, val)
