@@ -17,3 +17,6 @@
 # Tests coverage temp files.
 .coverage
 /cover
+
+# Rendered documentation.
+docs/_build/

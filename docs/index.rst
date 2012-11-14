@@ -1,7 +1,7 @@
-&#127864; Gimlet - Simple High-Performance WSGI Sessions
-========================================================
+Gimlet - Simple High-Performance WSGI Sessions
+==============================================
 
-Scott Torborg - [Cart Logic](http://www.cartlogic.com)
+.. module:: gimlet
 
 Gimlet is a Python infrastructure block to provide versatile key-value
 'session' storage for WSGI applications. The design philosophy is 'as fast as
@@ -21,27 +21,23 @@ It is also:
 * &frac14; simple syrup
 * lime garnish
 
-Limitations
-===========
-
-Currently NOT supported:
-
-* Server-side expiration
+Get the `code at GitHub <http://github.com/cartlogic/gimlet>`_.
 
 
 Installation
-============
+------------
+
+The recommended installation method is pip.::
 
     $ pip install gimlet
 
+-------------------------------------
 
 Quick Start
-===========
-
-### Basic Setup ###
+-----------
 
 Gimlet provides a WSGI Middleware which populates a Session object in the
-WSGI environ. The most simple setup looks like:
+WSGI environ. The most simple setup looks like::
 
     from gimlet import SessionMiddleware, RedisBackend
 
@@ -50,7 +46,7 @@ WSGI environ. The most simple setup looks like:
     app = SuperAwesomeApp()
     app = SessionMiddleware(app, 's3krit', backend)
 
-Inside your app code, you can access the session like:
+Inside your app code, you can access the session like::
 
     session = environ['gimlet.session']
     session['user'] = 'Frodo'
@@ -60,7 +56,10 @@ The session data will automatically be persisted at the end of the request.
 A unique identifier for the session (also visible to the client) is available
 as ``session.id``.
 
-### Key Options ###
+-------------------------------------
+
+Key Options
+-----------
 
 Typical web applications tend to have a concentration of session access on a
 relatively small set of keys, with small values. For example, a common session
@@ -71,34 +70,58 @@ as awhole, without limiting the session flexibility (particularly important for
 adapting legacy apps).
 
 To specify that a key should be stored on the client, pass the
-``clientside=True`` argument:
+``clientside=True`` argument::
 
     session.set('cart_id', 12345, clientside=True)
 
-**SECURITY NOTE** Keys that are stored on the client side are not encrypted by
-default, so it will be possible for eavesdroppers or end users to view their
-contents. THey are signed, however, so they cannot be modified without
-detection. To enable encryption of cookies, supply a random 64-char hex string
-as the ``encryption_key`` argument to ``SessionMiddleware``.
+.. warning::
+
+    Keys that are stored on the client side are not encrypted by default, so it
+    will be possible for eavesdroppers or end users to view their contents.
+    THey are signed, however, so they cannot be modified without detection. To
+    enable encryption of cookies, supply a random 64-char hex string as the
+    ``encryption_key`` argument to ``SessionMiddleware``.
 
 Keys can also be set as secure or not, and within secure keys, permanent or
-not. For example:
+not. For example::
 
     session.set('account_id', 777, secure=True, permanent=False)
 
-Or, combined:
+Or, combined::
 
     session.set('cart_id', 12345, clientside=True, secure=True)
 
-### To Do ###
+-------------------------------------
+
+To Do
+-----
 
 Features that may be coming soon:
 
-- SQL backend.
+* SQL backend.
 
 Test areas that still need work:
 
-- Setting defaults for key setting in the middleware configuration.
+* Setting defaults for key setting in the middleware configuration.
+
+-------------------------------------
+
+.. include:: ../CHANGES
+
+-------------------------------------
+
+API
+---
+
+.. autoclass:: gimlet.SessionMiddleware
+    :members:
+
+
+License
+=======
+
+Gimlet is licensed under an MIT license. Please see the LICENSE file for more
+information.
 
 
 Code Standards
@@ -106,13 +129,13 @@ Code Standards
 
 Gimlet has a comprehensive test suite with 100% line and branch coverage, as
 reported by the excellent ``coverage`` module. To run the tests, simply run in
-the top level of the repo:
+the top level of the repo::
 
     $ nosetests
 
-There are no [PEP8](http://www.python.org/dev/peps/pep-0008/) or
-[Pyflakes](http://pypi.python.org/pypi/pyflakes) warnings in the codebase. To
-verify that:
+There are no `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ or
+`Pyflakes <http://pypi.python.org/pypi/pyflakes>`_ warnings in the codebase. To
+verify that::
 
     $ pip install pep8 pyflakes
     $ pep8 .
