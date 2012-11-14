@@ -17,8 +17,8 @@ but it will work with fairly simple and mature storage backends. It provides:
 It is also:
 
 * 2 oz gin
-* &frac12; oz lime juice
-* &frac14; simple syrup
+* 1/2 oz lime juice
+* 1/4 oz simple syrup
 * lime garnish
 
 
