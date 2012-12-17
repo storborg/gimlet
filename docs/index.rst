@@ -1,5 +1,5 @@
-Gimlet - Simple High-Performance WSGI Sessions
-==============================================
+Overview
+========
 
 .. module:: gimlet
 
@@ -25,7 +25,7 @@ Get the `code at GitHub <http://github.com/cartlogic/gimlet>`_.
 
 
 Installation
-------------
+============
 
 The recommended installation method is pip.::
 
@@ -34,7 +34,7 @@ The recommended installation method is pip.::
 -------------------------------------
 
 Quick Start
------------
+===========
 
 Gimlet provides a WSGI Middleware which populates a Session object in the
 WSGI environ. The most simple setup looks like::
@@ -59,7 +59,7 @@ as ``session.id``.
 -------------------------------------
 
 Key Options
------------
+===========
 
 Typical web applications tend to have a concentration of session access on a
 relatively small set of keys, with small values. For example, a common session
@@ -94,7 +94,7 @@ Or, combined::
 -------------------------------------
 
 To Do
------
+=====
 
 Features that may be coming soon:
 
@@ -111,7 +111,7 @@ Test areas that still need work:
 -------------------------------------
 
 API
----
+===
 
 .. autoclass:: gimlet.SessionMiddleware
     :members:
