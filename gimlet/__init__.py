@@ -283,10 +283,11 @@ class SessionMiddleware(object):
             'secure_nonperm': self.cookie_name + '-sn'
         }
 
+        future = datetime.fromtimestamp(0x7FFFFFFF)
         self.channel_opts = {
-            'insecure': {},
-            'secure_perm': dict(secure=(not fake_https)),
-            'secure_nonperm': dict(secure=(not fake_https), max_age=0)
+            'insecure': dict(expires=future),
+            'secure_perm': dict(secure=(not fake_https), expires=future),
+            'secure_nonperm': dict(secure=(not fake_https)),
         }
 
     def make_session_id(self):

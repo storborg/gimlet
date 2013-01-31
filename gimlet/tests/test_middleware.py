@@ -229,10 +229,10 @@ class TestActions(TestCase):
         for cookie in cookies.values():
             self.assertIn('httponly', cookie)
 
-        self.assertIn('max-age=0', cookies['gimlet-sn'])
-        self.assertNotIn('max-age', cookies['gimlet-sp'])
+        self.assertIn('max-age=', cookies['gimlet-sp'])
+        self.assertNotIn('max-age', cookies['gimlet-sn'])
         self.assertNotIn('max-age', cookies['gimlet'])
-        self.assertNotIn('expires', cookies['gimlet-sp'])
+        self.assertNotIn('expires', cookies['gimlet-sn'])
         self.assertNotIn('expires', cookies['gimlet'])
 
     def test_set_clientside(self):
