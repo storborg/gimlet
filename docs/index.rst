@@ -39,7 +39,8 @@ Quick Start
 Gimlet provides a WSGI Middleware which populates a Session object in the
 WSGI environ. The most simple setup looks like::
 
-    from gimlet import SessionMiddleware, RedisBackend
+    from gimlet.middleware import SessionMiddleware
+    from gimlet.backends.pyredis import RedisBackend
 
     backend = RedisBackend()
 
@@ -113,7 +114,7 @@ Test areas that still need work:
 API
 ===
 
-.. autoclass:: gimlet.SessionMiddleware
+.. autoclass:: gimlet.middleware.SessionMiddleware
     :members:
 
 

@@ -5,7 +5,7 @@ from webob import Request, Response
 from webob.exc import HTTPNotFound
 from webtest import TestApp
 
-from gimlet import SessionMiddleware
+from gimlet.middleware import SessionMiddleware
 
 
 class SampleApp(object):

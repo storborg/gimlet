@@ -3,7 +3,7 @@ from unittest import TestCase
 from webob import Request, Response
 from webtest import TestApp
 
-from gimlet import SessionMiddleware
+from gimlet.middleware import SessionMiddleware
 
 
 class DeferredSetApp(object):

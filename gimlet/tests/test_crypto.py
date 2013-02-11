@@ -10,7 +10,7 @@ except ImportError:
 else:
     encryption_available = AES
 
-from gimlet import SessionMiddleware
+from gimlet.middleware import SessionMiddleware
 
 from .test_middleware import SampleApp
 
