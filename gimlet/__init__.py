@@ -224,8 +224,7 @@ class CookieSerializer(Serializer):
 
         id = raw_id.encode('hex')
         client_data = pickle.loads(client_data_pkl)
-        return SessionChannel(id, created_timestamp, self.backend,
-                              fresh=False, client_data=client_data)
+        return id, created_timestamp, client_data
 
     def dump_payload(self, channel):
         """
@@ -293,17 +292,17 @@ class SessionMiddleware(object):
     def make_session_id(self):
         return os.urandom(16).encode('hex')
 
-    def new_session_channel(self):
-        id = self.make_session_id()
-        return SessionChannel(id, int(time.time()), self.backend, fresh=True)
-
     def read_channel(self, req, key):
         name = self.channel_names[key]
         if name in req.cookies:
-            sc = self.serializer.loads(req.cookies[name])
+            id, created_timestamp, client_data = \
+                self.serializer.loads(req.cookies[name])
+            return SessionChannel(id, created_timestamp, self.backend,
+                                  fresh=False, client_data=client_data)
         else:
-            sc = self.new_session_channel()
-        return sc
+            id = self.make_session_id()
+            return SessionChannel(id, int(time.time()), self.backend,
+                                  fresh=True)
 
     def write_channel(self, resp, key, channel):
         name = self.channel_names[key]
