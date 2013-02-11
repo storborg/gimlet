@@ -231,9 +231,12 @@ class TestActions(TestCase):
 
         self.assertIn('max-age=', cookies['gimlet-sp'])
         self.assertNotIn('max-age', cookies['gimlet-sn'])
-        self.assertNotIn('max-age', cookies['gimlet'])
+        self.assertIn('max-age', cookies['gimlet'])
         self.assertNotIn('expires', cookies['gimlet-sn'])
-        self.assertNotIn('expires', cookies['gimlet'])
+        self.assertIn('expires', cookies['gimlet'])
+
+        # XXX Assert that ``gimlet`` and ``gimlet-sp`` cookies are effectively
+        # permanent.
 
     def test_set_clientside(self):
         resp = self.app.get('/set/foo/bar?clientside=1')
