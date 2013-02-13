@@ -6,10 +6,7 @@ from .base import BaseBackend
 class SQLBackend(BaseBackend):
 
     def __init__(self, url, table_name='gimlet_channels'):
-        engine = create_engine(url)
-        meta = MetaData()
-        meta.bind = engine
-
+        meta = MetaData(bind=create_engine(url))
         self.table = Table(table_name, meta,
                            Column('id', types.Integer, primary_key=True),
                            Column('key', types.CHAR(32), nullable=False,
