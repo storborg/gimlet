@@ -17,6 +17,7 @@ class TestUtil(TestCase):
     def test_parse_settings(self):
         settings = {
             'gimlet.backend': 'sql',
+            'gimlet.backend.url': 'sqlite:///:memory:',
             'gimlet.fake_https': True,
             'gimlet.secret': 'super-secret',
             'non-gimlet-setting': None,
@@ -27,10 +28,11 @@ class TestUtil(TestCase):
     def test_parse_settings_absolute_backend(self):
         settings = {
             'backend': 'gimlet.backends.sql',
+            'backend.url': 'sqlite:///:memory:',
             'secret': 'super-secret',
         }
         options = parse_settings(settings, prefix='')
-        self.assertIs(options['backend'], SQLBackend)
+        self.assertIsInstance(options['backend'], SQLBackend)
 
     def test_parse_settings_None_backend(self):
         settings = {

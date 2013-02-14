@@ -47,6 +47,13 @@ def parse_settings(settings, prefix='gimlet.'):
         backend = options['backend']
         if not (isclass(backend) and issubclass(backend, BaseBackend)):
             raise ValueError('backend must be a subclass of BaseBackend')
+    backend_cls = options.get('backend')
+    if backend_cls is not None:
+        backend_options = {}
+        for k in options.keys():
+            if k.startswith('backend.'):
+                backend_options[k[8:]] = options.pop(k)
+        options['backend'] = options['backend'](**backend_options)
     return options
 
 
