@@ -35,7 +35,8 @@ class TestNoBackend(TestCase):
     def setUp(self):
         self.inner_app = inner_app
         self.backend = {}
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend)
+        wrapped_app = SessionMiddleware(
+            inner_app, 's3krit', backend=self.backend)
         self.app = TestApp(wrapped_app)
 
     def test_deferred_set_backend(self):

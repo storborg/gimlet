@@ -107,7 +107,8 @@ class TestActions(TestCase):
 
     def setUp(self):
         self.backend = {}
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', self.backend)
+        wrapped_app = SessionMiddleware(
+            inner_app, 's3krit', backend=self.backend)
         self.app = TestApp(wrapped_app)
 
     def test_getset_basic(self):

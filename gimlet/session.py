@@ -1,4 +1,7 @@
+import abc
 import itertools
+import os
+import time
 
 from datetime import datetime
 from collections import MutableMapping
@@ -6,12 +9,29 @@ from collections import MutableMapping
 
 class Session(MutableMapping):
 
-    def __init__(self, channels, defaults):
+    """Abstract front end for multiple session channels."""
+
+    # Subclasses need to define all of these
+    backend = abc.abstractproperty
+    channel_names = abc.abstractproperty
+    channel_opts = abc.abstractproperty
+    cookie_name = abc.abstractproperty
+    defaults = abc.abstractproperty
+    serializer = abc.abstractproperty
+
+    def __init__(self, request):
+        self.request = request
         self.flushed = False
+
+        channels = {}
+        for key in self.channel_names:
+            if (not self.channel_opts[key].get('secure') or
+                    request.scheme == 'https'):
+                channels[key] = self.read_channel(key)
         self.channels = channels
-        self.defaults = defaults
-        self.has_backend = all((ch.backend is not None) for ch in
-                               self.channels.values())
+
+        self.has_backend = all(
+            (ch.backend is not None) for ch in channels.values())
 
     @property
     def id(self):
@@ -24,6 +44,11 @@ class Session(MutableMapping):
     @property
     def created_time(self):
         return self.channels['insecure'].created_time
+
+    def response_callback(self, request, response):
+        self.flushed = True
+        for key in self.channels:
+            self.write_channel(response, key, self.channels[key])
 
     def __getitem__(self, key):
         for channel in self.channels.values():
@@ -121,6 +146,37 @@ class Session(MutableMapping):
         keys = '\n'.join(["-- %s --\n%r" % (k, v) for k, v in
                           self.channels.iteritems()])
         return "<Session \n%s\n>" % keys
+
+    def make_session_id(self):
+        return os.urandom(16).encode('hex')
+
+    def read_channel(self, key):
+        name = self.channel_names[key]
+        if name in self.request.cookies:
+            id, created_timestamp, client_data = \
+                self.serializer.loads(self.request.cookies[name])
+            return SessionChannel(id, created_timestamp, self.backend,
+                                  fresh=False, client_data=client_data)
+        else:
+            id = self.make_session_id()
+            return SessionChannel(id, int(time.time()), self.backend,
+                                  fresh=True)
+
+    def write_channel(self, resp, key, channel):
+        name = self.channel_names[key]
+
+        # Set a cookie IFF the following conditions:
+        # - data has been changed on the client
+        # OR
+        # - the cookie is fresh
+        if channel.client_dirty or channel.fresh:
+            resp.set_cookie(name, self.serializer.dumps(channel),
+                            httponly=True, **self.channel_opts[key])
+
+        # Write to the backend IFF the following conditions:
+        # - data has been changed on the backend
+        if channel.backend_dirty:
+            channel.backend_write()
 
 
 class SessionChannel(object):
