@@ -179,6 +179,9 @@ class Session(MutableMapping):
         if channel.backend_dirty:
             channel.backend_write()
 
+    def invalidate(self):
+        self.clear()
+
     # CSRF methods taken directly from pyramid_beaker
 
     def new_csrf_token(self):
