@@ -3,6 +3,7 @@ import itertools
 import os
 import time
 
+from binascii import hexlify
 from datetime import datetime
 from collections import MutableMapping
 
@@ -177,6 +178,19 @@ class Session(MutableMapping):
         # - data has been changed on the backend
         if channel.backend_dirty:
             channel.backend_write()
+
+    # CSRF methods taken directly from pyramid_beaker
+
+    def new_csrf_token(self):
+        token = hexlify(os.urandom(20))
+        self['_csrft_'] = token
+        return token
+
+    def get_csrf_token(self):
+        token = self.get('_csrft_', None)
+        if token is None:
+            token = self.new_csrf_token()
+        return token
 
 
 class SessionChannel(object):

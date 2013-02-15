@@ -37,3 +37,10 @@ class TestSession(TestCase):
         self.assertIn('a', sess.channels['insecure'])
         self.assertNotIn('a', sess.channels['secure_perm'])
         self.assertNotIn('a', sess.channels['secure_nonperm'])
+
+    def test_csrf(self):
+        sess = self._make_session()
+        self.assertNotIn('_csrft_', sess)
+        token = sess.get_csrf_token()
+        self.assertIn('_csrft_', sess)
+        self.assertEqual(token, sess.get_csrf_token())
