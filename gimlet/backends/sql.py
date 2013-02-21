@@ -15,20 +15,18 @@ class SQLBackend(BaseBackend):
         self.table.create(checkfirst=True)
 
     def __setitem__(self, key, value):
+        table = self.table
+        key_col = table.c.key
         raw = self.serialize(value)
-
         # Check if this key exists with a SELECT FOR UPDATE, to protect
         # against a race with other concurrent writers of this key.
-        r = self.table.select('1', for_update=True).\
-            where(self.table.c.key == key).execute().fetchone()
-
+        r = table.count(key_col == key, for_update=True).scalar()
         if r:
             # If it exists, use an UPDATE.
-            self.table.update().values(data=raw).\
-                where(self.table.c.key == key).execute()
+            table.update().values(data=raw).where(key_col == key).execute()
         else:
             # Otherwise INSERT.
-            self.table.insert().values(key=key, data=raw).execute()
+            table.insert().values(key=key, data=raw).execute()
 
     def __getitem__(self, key):
         r = select([self.table.c.data], self.table.c.key == key).\
