@@ -29,10 +29,8 @@ class SQLBackend(BaseBackend):
             table.insert().values(key=key, data=raw).execute()
 
     def __getitem__(self, key):
-        r = select([self.table.c.data], self.table.c.key == key).\
-            execute().fetchone()
-        if r:
-            raw = r[0]
+        raw = select([self.table.c.data], self.table.c.key == key).scalar()
+        if raw:
             return self.deserialize(raw)
         else:
             raise KeyError('key %r not found' % key)
