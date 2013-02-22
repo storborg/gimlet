@@ -159,9 +159,7 @@ class Session(MutableMapping):
             return SessionChannel(id, created_timestamp, self.backend,
                                   fresh=False, client_data=client_data)
         else:
-            id = self.make_session_id()
-            return SessionChannel(id, int(time.time()), self.backend,
-                                  fresh=True)
+            return self.fresh_channel()
 
     def write_channel(self, resp, key, channel):
         name = self.channel_names[key]
@@ -179,8 +177,14 @@ class Session(MutableMapping):
         if channel.backend_dirty:
             channel.backend_write()
 
+    def fresh_channel(self):
+        return SessionChannel(
+            self.make_session_id(), int(time.time()), self.backend, fresh=True)
+
     def invalidate(self):
         self.clear()
+        for key in self.channels:
+            self.channels[key] = self.fresh_channel()
 
     # CSRF methods taken directly from pyramid_beaker
 
