@@ -1,3 +1,5 @@
+import logging
+
 import abc
 import itertools
 import os
@@ -8,6 +10,8 @@ from datetime import datetime
 from collections import MutableMapping
 
 from itsdangerous import BadSignature
+
+log = logging.getLogger('gimlet')
 
 
 class Session(MutableMapping):
@@ -160,6 +164,8 @@ class Session(MutableMapping):
                 id, created_timestamp, client_data = \
                     self.serializer.loads(self.request.cookies[name])
             except BadSignature as e:
+                log.warn('Request from %s contained bad sig. %s',
+                         self.request.remote_addr, e)
                 return self.fresh_channel()
             else:
                 return SessionChannel(id, created_timestamp, self.backend,
