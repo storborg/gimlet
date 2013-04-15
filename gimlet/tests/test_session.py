@@ -106,3 +106,18 @@ class TestSession_Functional(TestCase):
         new_cookie_value = res.request.cookies['gimlet']
         self.assert_(new_cookie_value)
         self.assertNotEqual(new_cookie_value, old_cookie_value)
+
+    def test_bad_signature(self):
+        # First request has no cookies; this sets them
+        res = self.app.get('/set')
+        self.assertEqual(res.request.cookies, {})
+        self.assertIn('Set-Cookie', res.headers)
+        # Mangle a cookie name
+        orig_cookie = self.app.cookies['gimlet']
+        mangled_cookie = orig_cookie.lower()
+        self.app.cookies['gimlet'] = mangled_cookie
+        # Nest request should succeed and then set a new cookie
+        res = self.app.get('/get')
+        self.assertIn('gimlet', self.app.cookies)
+        self.assertNotEqual(self.app.cookies['gimlet'], orig_cookie)
+        self.assertNotEqual(self.app.cookies['gimlet'], mangled_cookie)

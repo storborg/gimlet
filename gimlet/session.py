@@ -7,6 +7,8 @@ from binascii import hexlify
 from datetime import datetime
 from collections import MutableMapping
 
+from itsdangerous import BadSignature
+
 
 class Session(MutableMapping):
 
@@ -154,10 +156,14 @@ class Session(MutableMapping):
     def read_channel(self, key):
         name = self.channel_names[key]
         if name in self.request.cookies:
-            id, created_timestamp, client_data = \
-                self.serializer.loads(self.request.cookies[name])
-            return SessionChannel(id, created_timestamp, self.backend,
-                                  fresh=False, client_data=client_data)
+            try:
+                id, created_timestamp, client_data = \
+                    self.serializer.loads(self.request.cookies[name])
+            except BadSignature as e:
+                return self.fresh_channel()
+            else:
+                return SessionChannel(id, created_timestamp, self.backend,
+                                      fresh=False, client_data=client_data)
         else:
             return self.fresh_channel()
 
