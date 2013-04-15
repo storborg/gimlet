@@ -47,6 +47,18 @@ class TestSession(TestCase):
         sess.invalidate()
         self.assertNotIn('a', sess)
 
+    def test_flash(self):
+        sess = self._make_session()
+        self.assertEqual(sess.peek_flash(), [])
+        sess.flash('abc')
+        sess.flash('abc')
+        self.assertEqual(sess.peek_flash(), ['abc', 'abc'])
+        self.assertEqual(sess.pop_flash(), ['abc', 'abc'])
+        self.assertEqual(sess.peek_flash(), [])
+        sess.flash('xyz', allow_duplicate=False)
+        sess.flash('xyz', allow_duplicate=False)
+        self.assertEqual(sess.peek_flash(), ['xyz'])
+
     def test_csrf(self):
         sess = self._make_session()
         self.assertNotIn('_csrft_', sess)

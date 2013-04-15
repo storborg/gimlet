@@ -198,7 +198,21 @@ class Session(MutableMapping):
         for key in self.channels:
             self.channels[key] = self.fresh_channel()
 
-    # CSRF methods taken directly from pyramid_beaker
+    # Flash & CSRF methods taken directly from pyramid_beaker.
+    # These are part of the Pyramid Session API.
+
+    def flash(self, msg, queue='', allow_duplicate=True):
+        storage = self.setdefault('_f_' + queue, [])
+        if allow_duplicate or (msg not in storage):
+            storage.append(msg)
+
+    def pop_flash(self, queue=''):
+        storage = self.pop('_f_' + queue, [])
+        return storage
+
+    def peek_flash(self, queue=''):
+        storage = self.get('_f_' + queue, [])
+        return storage
 
     def new_csrf_token(self):
         token = hexlify(os.urandom(20))
