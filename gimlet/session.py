@@ -125,6 +125,14 @@ class Session(MutableMapping):
         if self.flushed:
             channel.backend_write()
 
+    def save(self, secure=None, permanent=None, clientside=None):
+        channel, clientside = self._check_options(secure, permanent,
+                                                  clientside)
+        if clientside:
+            channel.client_dirty = True
+        else:
+            channel.backend_dirty = True
+
     def __delitem__(self, key):
         if key not in self:
             raise KeyError

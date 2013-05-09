@@ -64,6 +64,19 @@ class SampleApp(object):
         else:
             return Response('false')
 
+    def append(self, req, sess):
+        key = req.path_info_pop()
+        val = req.path_info_pop()
+        if key not in sess:
+            sess[key] = []
+        sess[key].append(val)
+        sess.save()
+        return Response('ok')
+
+    def flatten(self, req, sess):
+        key = req.path_info_pop()
+        return Response(':'.join(sess[key]))
+
     def is_secure(self, req, sess):
         key = req.path_info_pop()
         return Response(str(sess.is_secure(key)))
@@ -344,6 +357,12 @@ class TestActions(TestCase):
         resp.mustcontain('meriadoc')
         resp.mustcontain('samwise')
         resp.mustcontain('peregrin')
+
+    def test_mutate(self):
+        self.app.get('/append/spider/itsy')
+        self.app.get('/append/spider/bitsy')
+        resp = self.app.get('/flatten/spider')
+        resp.mustcontain('itsy:bitsy')
 
 
 class TestNoBackend(TestCase):

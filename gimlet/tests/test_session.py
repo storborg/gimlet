@@ -92,6 +92,24 @@ class App(object):
         request.session.invalidate()
         return Response('invalidate')
 
+    def mutate_set(self, request):
+        request.session['b'] = {'bar': 42}
+        return Response('mutate_set')
+
+    def mutate_get(self, request):
+        s = ','.join(['%s:%s' % (k, v)
+                      for k, v in sorted(request.session['b'].items())])
+        return Response(s)
+
+    def mutate_nosave(self, request):
+        request.session['b']['foo'] = 123
+        return Response('mutate_nosave')
+
+    def mutate_save(self, request):
+        request.session['b']['foo'] = 123
+        request.session.save()
+        return Response('mutate_save')
+
 
 class TestSession_Functional(TestCase):
 
@@ -133,3 +151,23 @@ class TestSession_Functional(TestCase):
         self.assertIn('gimlet', self.app.cookies)
         self.assertNotEqual(self.app.cookies['gimlet'], orig_cookie)
         self.assertNotEqual(self.app.cookies['gimlet'], mangled_cookie)
+
+    def test_mutate(self):
+        # First set a key.
+        res = self.app.get('/mutate_set')
+        self.assertIn('Set-Cookie', res.headers)
+        # Check it
+        res = self.app.get('/mutate_get')
+        self.assertEqual(res.body, 'bar:42')
+        # Update the key without saving
+        res = self.app.get('/mutate_nosave')
+        res.mustcontain('mutate_nosave')
+        # Check again, it shouldn't be saved
+        res = self.app.get('/mutate_get')
+        self.assertEqual(res.body, 'bar:42')
+        # Now update the key with saving
+        res = self.app.get('/mutate_save')
+        res.mustcontain('mutate_save')
+        # Check again, it should be saved
+        res = self.app.get('/mutate_get')
+        self.assertEqual(res.body, 'bar:42,foo:123')
