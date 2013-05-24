@@ -21,6 +21,7 @@ setup(name="gimlet",
           'webob',
           'redis',
           'pylibmc',
+          'sqlalchemy',
           # Required for cookie encryption.
           'pycrypto',
           # These are for tests.
