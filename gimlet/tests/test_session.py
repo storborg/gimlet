@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from webob import Request, Response
 
-from webtest import TestApp
+import webtest
 
 from gimlet.factories import session_factory_factory
 
@@ -67,14 +67,26 @@ class TestSession(TestCase):
         self.assertEqual(token, sess.get_csrf_token())
 
 
+class TestRequest(webtest.TestRequest):
+
+    @property
+    def session(self):
+        return self.environ['gimlet.session']
+
+
+class TestApp(webtest.TestApp):
+
+    RequestClass = TestRequest
+
+
 class App(object):
 
     def __init__(self):
         self.session_factory = session_factory_factory('secret')
 
     def __call__(self, environ, start_response):
-        request = Request(environ)
-        request.session = self.session_factory(request)
+        request = TestRequest(environ)
+        environ['gimlet.session'] = self.session_factory(request)
         view_name = request.path_info_pop()
         view = getattr(self, view_name)
         response = view(request)
@@ -110,6 +122,11 @@ class App(object):
         request.session.save()
         return Response('mutate_save')
 
+    def mangle_cookie(self, request):
+        resp = Response('mangle_cookie')
+        resp.set_cookie('gimlet', request.cookies['gimlet'].lower())
+        return resp
+
 
 class TestSession_Functional(TestCase):
 
@@ -142,12 +159,13 @@ class TestSession_Functional(TestCase):
         res = self.app.get('/set')
         self.assertEqual(res.request.cookies, {})
         self.assertIn('Set-Cookie', res.headers)
-        # Mangle a cookie name
+        # Mangle cookie
         orig_cookie = self.app.cookies['gimlet']
-        mangled_cookie = orig_cookie.lower()
-        self.app.cookies['gimlet'] = mangled_cookie
-        # Nest request should succeed and then set a new cookie
-        res = self.app.get('/get')
+        self.app.get('/mangle_cookie')
+        mangled_cookie = self.app.cookies['gimlet']
+        self.assertEqual(mangled_cookie, orig_cookie.lower())
+        # Next request should succeed and then set a new cookie
+        self.app.get('/get')
         self.assertIn('gimlet', self.app.cookies)
         self.assertNotEqual(self.app.cookies['gimlet'], orig_cookie)
         self.assertNotEqual(self.app.cookies['gimlet'], mangled_cookie)
