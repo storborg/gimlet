@@ -63,7 +63,7 @@ class Session(MutableMapping):
                 return channel.get(key)
             except KeyError:
                 pass
-        raise KeyError
+        raise KeyError(key)
 
     def _check_options(self, secure, permanent, clientside):
         # If permanent is explicitly specified as False, ensure that secure is
@@ -135,7 +135,7 @@ class Session(MutableMapping):
 
     def __delitem__(self, key):
         if key not in self:
-            raise KeyError
+            raise KeyError(key)
         for channel in self.channels.values():
             if key in channel:
                 channel.delete(key)
