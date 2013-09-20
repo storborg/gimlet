@@ -9,108 +9,104 @@ from gimlet.middleware import SessionMiddleware
 
 
 class SampleApp(object):
-    """
-    This is a sample app which manipulates the session. It provides URL actions
-    which mimic the dict-like interface of the session and allow actions
-    against keys.
 
-    Hitting the URL /set/foo/bar will set foo=bar in the session and return
-    'ok'.
+    """A WSGI app that manipulates the session.
 
-    Hitting the URL /get/foo will then return 'bar'.
+    It provides actions which mimic the dict-like interface of
+    :class:`gimlet.session.Session`.
+
+    Hitting the URL ``/set/foo/bar`` will set 'foo' => 'bar' in the session
+    and return 'ok'.
+
+    Hitting the URL ``/get/foo`` will then return 'bar'.
 
     Getting a key which has not been set will return a 404.
+
     """
+
     def __call__(self, environ, start_response):
         req = Request(environ)
+        path_info_parts = req.path_info.strip('/').split('/')
+        action_name = path_info_parts[0]
+
+        req.matchdict = {'action': action_name}
+        try:
+            req.matchdict['key'] = path_info_parts[1]
+            req.matchdict['value'] = path_info_parts[2]
+        except IndexError:
+            pass
+
+        # Options passed to ``Session.get()``, et al
+        req.options = {k: bool(int(v)) for k, v in req.params.items()}
+
+        action = getattr(self, action_name)
         sess = req.environ['gimlet.session']
-        action = req.path_info_pop()
-        req.settings = {k: bool(int(v)) for k, v in req.params.items()}
-        resp = getattr(self, action)(req, sess)
+
+        resp = action(req, sess)
+        if isinstance(resp, basestring):
+            resp = Response(resp)
         resp.content_type = 'text/plain'
         return resp(environ, start_response)
 
     def set(self, req, sess):
-        key = req.path_info_pop()
-        val = req.path_info_pop()
-        if req.params:
-            sess.set(key, val,
-                     clientside=req.settings.get('clientside'),
-                     secure=req.settings.get('secure'),
-                     permanent=req.settings.get('permanent'))
-        else:
-            sess[key] = val
-        return Response('ok')
+        sess.set(req.matchdict['key'], req.matchdict['value'], **req.options)
+        return 'ok'
 
     def get(self, req, sess):
-        key = req.path_info_pop()
-        try:
-            if req.params:
-                val = sess.get(key,
-                               clientside=req.settings.get('clientside'),
-                               secure=req.settings.get('secure'),
-                               permanent=req.settings.get('permanent'))
-            else:
-                val = sess[key]
-        except KeyError:
-            return HTTPNotFound('key %s not found' % key)
+        key = req.matchdict['key']
+        if req.options:
+            val = sess.get(key, **req.options)
         else:
-            return Response(str(val))
+            try:
+                val = sess[key]
+            except KeyError:
+                return HTTPNotFound('key %s not found' % key)
+        return str(val)
 
     def has(self, req, sess):
-        key = req.path_info_pop()
-        if key in sess:
-            return Response('true')
-        else:
-            return Response('false')
+        return str(req.matchdict['key'] in sess).lower()
 
     def append(self, req, sess):
-        key = req.path_info_pop()
-        val = req.path_info_pop()
-        if key not in sess:
-            sess[key] = []
-        sess[key].append(val)
+        key = req.matchdict['key']
+        sess.setdefault(key, [])
+        sess[key].append(req.matchdict['value'])
         sess.save()
-        return Response('ok')
+        return 'ok'
 
     def flatten(self, req, sess):
-        key = req.path_info_pop()
-        return Response(':'.join(sess[key]))
+        return ':'.join(sess[req.matchdict['key']])
 
     def is_secure(self, req, sess):
-        key = req.path_info_pop()
-        return Response(str(sess.is_secure(key)))
+        return str(sess.is_secure(req.matchdict['key']))
 
     def is_permanent(self, req, sess):
-        key = req.path_info_pop()
-        return Response(str(sess.is_permanent(key)))
+        return str(sess.is_permanent(req.matchdict['key']))
 
     def delete(self, req, sess):
-        key = req.path_info_pop()
+        key = req.matchdict['key']
         try:
             del sess[key]
         except KeyError:
             return HTTPNotFound('key %s not found' % key)
-        else:
-            return Response('ok')
+        return 'ok'
 
     def id(self, req, sess):
-        return Response(str(sess.id))
+        return str(sess.id)
 
     def time(self, req, sess):
-        return Response(str(sess.created_time))
+        return str(sess.created_time)
 
     def timestamp(self, req, sess):
-        return Response(str(sess.created_timestamp))
+        return str(sess.created_timestamp)
 
     def len(self, req, sess):
-        return Response(str(len(sess)))
+        return str(len(sess))
 
     def iter(self, req, sess):
-        return Response('\n'.join(iter(sess)))
+        return '\n'.join(iter(sess))
 
     def repr(self, req, sess):
-        return Response(repr(sess))
+        return repr(sess)
 
 
 inner_app = SampleApp()
@@ -227,7 +223,7 @@ class TestActions(TestCase):
 
     def test_set_insecure_nonpermanent_fails(self):
         with self.assertRaises(ValueError):
-            self.app.get('/set/gimli?secure=0&permanent=0')
+            self.app.get('/set/gimli/bogus-value?secure=0&permanent=0')
 
     def test_cookie_metadata(self):
         resp = self.app.get('https://localhost/set/frodo/ring')
@@ -293,7 +289,7 @@ class TestActions(TestCase):
         resp = self.app.get('/set/greeting/aloha?clientside=1')
         resp.mustcontain('ok')
 
-        resp = self.app.get('/get/greeting')
+        resp = self.app.get('/get/greeting?clientside=1')
         resp.mustcontain('aloha')
 
         self.assertEqual(self.backend.values(), [])
@@ -380,7 +376,7 @@ class TestNoBackend(TestCase):
         resp.mustcontain('bar')
 
         with self.assertRaises(ValueError):
-            app.get('/set/quux?clientside=0')
+            app.get('/set/quux/bogus-value?clientside=0')
 
     def test_bad_middleware_config(self):
         with self.assertRaises(ValueError):

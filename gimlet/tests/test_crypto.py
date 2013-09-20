@@ -36,7 +36,7 @@ class TestEncryptedSession(TestCase):
         resp.mustcontain('bar')
 
         with self.assertRaises(ValueError):
-            self.app.get('/set/quux?clientside=0')
+            self.app.get('/set/quux/bogus-value?clientside=0')
 
     @skipUnless(encryption_available, "pycrypto not available")
     def test_wrong_key_length(self):
