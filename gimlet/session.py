@@ -14,6 +14,11 @@ from itsdangerous import BadSignature
 log = logging.getLogger('gimlet')
 
 
+# Used by :meth:`Session.get` to detect when no options are explicitly
+# passed.
+DEFAULT = object()
+
+
 class Session(MutableMapping):
 
     """Abstract front end for multiple session channels."""
@@ -58,6 +63,7 @@ class Session(MutableMapping):
             self.write_channel(response, key, self.channels[key])
 
     def __getitem__(self, key):
+        """Get value for ``key`` from the first channel it's found in."""
         for channel in self.channels.values():
             try:
                 return channel.get(key)
@@ -101,12 +107,30 @@ class Session(MutableMapping):
 
         return self.channels[channel_key], clientside
 
-    def get(self, key, default=None,
-            secure=None, permanent=None, clientside=None):
-        channel, clientside = self._check_options(secure, permanent,
-                                                  clientside)
+    def get(self, key, default=None, secure=DEFAULT, permanent=DEFAULT,
+            clientside=DEFAULT):
+        """Get value for ``key`` or ``default`` if ``key`` isn't present.
+
+        When no options are passed, this behaves like `[]`--it will return
+        the value for ``key`` from the first channel it's found in.
+
+        On the other hand, if *any* option is specified, this will check
+        *all* of the options, set defaults for those that aren't passed,
+        then try to get the value from a specific channel.
+
+        In either case, if ``key`` isn't present, the ``default`` value is
+        returned, just like a normal ``dict.get()``.
+
+        """
+        options = secure, permanent, clientside
+        if all(opt is DEFAULT for opt in options):
+            action = lambda: self[key]
+        else:
+            options = (opt if opt is not DEFAULT else None for opt in options)
+            channel, clientside = self._check_options(*options)
+            action = lambda: channel.get(key, clientside=clientside)
         try:
-            return channel.get(key, clientside=clientside)
+            return action()
         except KeyError:
             return default
 
