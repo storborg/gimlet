@@ -2,7 +2,7 @@ from setuptools import setup
 
 
 setup(name="gimlet",
-      version='0.1',
+      version='0.2',
       description='Simple High-Performance WSGI Sessions',
       long_description='',
       classifiers=[

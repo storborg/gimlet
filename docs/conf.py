@@ -24,7 +24,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Gimlet'
-copyright = u'2012, Scott Torborg'
+copyright = u'2012-2013, Scott Torborg'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -65,7 +65,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'cartlogic-sphinx'
+html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -73,7 +73,7 @@ html_theme = 'cartlogic-sphinx'
 #html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ['/var/sphinx-themes']
+#html_theme_path = ['/var/sphinx-themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
