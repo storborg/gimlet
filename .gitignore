@@ -12,7 +12,10 @@
 *.pyc
 
 # Egg metadata, regenerated from source files by setuptools.
-/gimlet.egg-info
+*.egg-info
+
+# Tox working dir
+.tox/
 
 # Tests coverage temp files.
 .coverage

@@ -1,6 +1,11 @@
 from setuptools import setup
 
 
+# Python 3 notes:
+# Currently the memcached backend depends on pylibmc, which is not python 3
+# compatible.
+
+
 setup(name="gimlet",
       version='0.2',
       description='Simple High-Performance WSGI Sessions',
@@ -24,11 +29,6 @@ setup(name="gimlet",
           'sqlalchemy',
           # Required for cookie encryption.
           'pycrypto',
-          # These are for tests.
-          'coverage',
-          'nose>=1.1',
-          'nose-cover3',
-          'webtest>=2.0.6',
       ],
       license='MIT',
       packages=['gimlet'],
