@@ -1,5 +1,5 @@
-Overview
-========
+Gimlet - Better WSGI Sessions
+=============================
 
 .. module:: gimlet
 
@@ -9,6 +9,7 @@ possible with slow components', which is to say, I/O load will be minimized,
 but it will work with fairly simple and mature storage backends. It provides:
 
 * Easy setup and configuration
+* Supports split HTTP / HTTPS environments smoothly
 * Key-value dict-like session access
 * Multiple backend options, including redis and SQL
 * Efficient - absolute minimal I/O load
@@ -24,17 +25,8 @@ It is also:
 Get the `code at GitHub <http://github.com/cartlogic/gimlet>`_.
 
 
-Installation
-============
-
-The recommended installation method is pip.::
-
-    $ pip install gimlet
-
--------------------------------------
-
 Quick Start
-===========
+-----------
 
 Gimlet provides a WSGI Middleware which populates a Session object in the
 WSGI environ. The most simple setup looks like::
@@ -57,10 +49,9 @@ The session data will automatically be persisted at the end of the request.
 A unique identifier for the session (also visible to the client) is available
 as ``session.id``.
 
--------------------------------------
 
 Key Options
-===========
+-----------
 
 Typical web applications tend to have a concentration of session access on a
 relatively small set of keys, with small values. For example, a common session
@@ -79,7 +70,7 @@ To specify that a key should be stored on the client, pass the
 
     Keys that are stored on the client side are not encrypted by default, so it
     will be possible for eavesdroppers or end users to view their contents.
-    THey are signed, however, so they cannot be modified without detection. To
+    They are signed, however, so they cannot be modified without detection. To
     enable encryption of cookies, supply a random 64-char hex string as the
     ``encryption_key`` argument to ``SessionMiddleware``.
 
@@ -92,54 +83,20 @@ Or, combined::
 
     session.set('cart_id', 12345, clientside=True, secure=True)
 
--------------------------------------
 
-To Do
-=====
+Contents
+--------
 
-Features that may be coming soon:
+.. toctree::
+    :maxdepth: 2
 
-* SQL backend.
-
-Test areas that still need work:
-
-* Setting defaults for key setting in the middleware configuration.
-
--------------------------------------
-
-.. include:: ../CHANGES
-
--------------------------------------
-
-API
-===
-
-.. autoclass:: gimlet.middleware.SessionMiddleware
-    :members:
+    api
+    contributing
+    changelog
 
 
 License
-=======
+-------
 
 Gimlet is licensed under an MIT license. Please see the LICENSE file for more
 information.
-
-
-Code Standards
-==============
-
-Gimlet has a comprehensive test suite with 100% line and branch coverage, as
-reported by the excellent ``coverage`` module. To run the tests, simply run in
-the top level of the repo::
-
-    $ nosetests
-
-There are no `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ or
-`Pyflakes <http://pypi.python.org/pypi/pyflakes>`_ warnings in the codebase. To
-verify that::
-
-    $ pip install pep8 pyflakes
-    $ pep8 .
-    $ pyflakes .
-
-Any pull requests must maintain the sanctity of these three pillars.
