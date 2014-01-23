@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 # Python 3 notes:
@@ -31,7 +31,7 @@ setup(name="gimlet",
           'pycrypto',
       ],
       license='MIT',
-      packages=['gimlet'],
+      packages=find_packages(),
       test_suite='nose.collector',
       tests_require=['nose'],
       zip_safe=False)
