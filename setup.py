@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 
 setup(name="gimlet",
-      version='0.2',
+      version='0.3',
       description='Simple High-Performance WSGI Sessions',
       long_description='',
       classifiers=[

@@ -46,16 +46,27 @@ class Session(MutableMapping):
             (ch.backend is not None) for ch in channels.values())
 
     @property
+    def default_channel(self):
+        if 'insecure' in self.channels:
+            return self.channels['insecure']
+        else:
+            try:
+                return self.channels['secure_perm']
+            except KeyError:
+                raise KeyError("'secure_perm' not found: channels are %r" %
+                               self.channels)
+
+    @property
     def id(self):
-        return self.channels['insecure'].id
+        return self.default_channel.id
 
     @property
     def created_timestamp(self):
-        return self.channels['insecure'].created_timestamp
+        return self.default_channel.created_timestamp
 
     @property
     def created_time(self):
-        return self.channels['insecure'].created_time
+        return self.default_channel.created_time
 
     def response_callback(self, request, response):
         self.flushed = True
@@ -175,7 +186,7 @@ class Session(MutableMapping):
 
     def is_permanent(self, key):
         return ((key in self.channels.get('secure_perm', {})) or
-                (key in self.channels['insecure']))
+                (key in self.channels.get('insecure', {})))
 
     def is_secure(self, key):
         return ((key in self.channels.get('secure_nonperm', {})) or
