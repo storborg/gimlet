@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from datetime import datetime
 
 from .crypto import Crypter
@@ -67,7 +69,7 @@ def session_factory_factory(secret,
         configuration['channel_opts']['secure_nonperm'] = \
             {'secure': (not fake_https)}
 
-    return type('SessionFactory', (Session,), configuration)
+    return type(str('SessionFactory'), (Session,), configuration)
 
 
 def session_factory_from_settings(settings, prefix='gimlet.'):

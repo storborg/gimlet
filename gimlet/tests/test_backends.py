@@ -1,8 +1,13 @@
-from unittest import TestCase
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+import sys
+from unittest import TestCase, skipIf
 
 from gimlet.backends.pyredis import RedisBackend
-from gimlet.backends.memcache import MemcacheBackend
 from gimlet.backends.sql import SQLBackend
+from gimlet.backends.memcache import MemcacheBackend
+
+PY3 = sys.version_info[0] > 2
 
 
 class TestBackendClass(TestCase):
@@ -13,24 +18,25 @@ class TestBackendClass(TestCase):
         self.backend = self.backend_class(**self.backend_kwargs)
 
     def test_getset(self):
-        self.backend['foo'] = 'bar'
-        self.assertEqual(self.backend['foo'], 'bar')
+        self.backend[b'foo'] = b'bar'
+        self.assertEqual(self.backend[b'foo'], b'bar')
 
-        self.backend['foo'] = 'baz'
-        self.assertEqual(self.backend['foo'], 'baz')
+        self.backend[b'foo'] = b'baz'
+        self.assertEqual(self.backend[b'foo'], b'baz')
 
-        self.backend['small'] = 'world'
-        self.assertEqual(self.backend['small'], 'world')
+        self.backend[b'small'] = b'world'
+        self.assertEqual(self.backend[b'small'], b'world')
 
     def test_missing(self):
         with self.assertRaises(KeyError):
-            self.backend['missing']
+            self.backend[b'missing']
 
 
 class TestRedisBackend(TestBackendClass):
     backend_class = RedisBackend
 
 
+@skipIf(PY3, "memcached backend is not supported on python 3")
 class TestMemcacheBackend(TestBackendClass):
     backend_class = MemcacheBackend
 

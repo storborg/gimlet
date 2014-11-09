@@ -1,4 +1,11 @@
-import pylibmc
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+import sys
+
+PY3 = sys.version_info[0] > 2
+
+if not PY3:
+    import pylibmc
 
 from .base import BaseBackend
 

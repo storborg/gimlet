@@ -1,4 +1,7 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import os
+import binascii
 from unittest import TestCase, skipUnless
 
 from webtest import TestApp
@@ -20,7 +23,7 @@ inner_app = SampleApp()
 class TestEncryptedSession(TestCase):
     def setUp(self):
         self.inner_app = inner_app
-        test_key = os.urandom(32).encode('hex')
+        test_key = binascii.hexlify(os.urandom(32))
         wrapped_app = SessionMiddleware(inner_app, 's3krit',
                                         encryption_key=test_key)
         self.app = TestApp(wrapped_app)
@@ -42,7 +45,7 @@ class TestEncryptedSession(TestCase):
     def test_wrong_key_length(self):
         with self.assertRaises(ValueError):
             SessionMiddleware(self.inner_app, 's3krit',
-                              encryption_key=os.urandom(20).encode('hex'))
+                              encryption_key=binascii.hexlify(os.urandom(20)))
 
     @skipUnless(encryption_available, "pycrypto not available")
     def test_non_hex_key(self):

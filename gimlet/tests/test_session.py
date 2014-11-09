@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from unittest import TestCase
 
 from webob import Request, Response
@@ -176,16 +178,16 @@ class TestSession_Functional(TestCase):
         self.assertIn('Set-Cookie', res.headers)
         # Check it
         res = self.app.get('/mutate_get')
-        self.assertEqual(res.body, 'bar:42')
+        self.assertEqual(res.body.decode('utf8'), 'bar:42')
         # Update the key without saving
         res = self.app.get('/mutate_nosave')
         res.mustcontain('mutate_nosave')
         # Check again, it shouldn't be saved
         res = self.app.get('/mutate_get')
-        self.assertEqual(res.body, 'bar:42')
+        self.assertEqual(res.body.decode('utf8'), 'bar:42')
         # Now update the key with saving
         res = self.app.get('/mutate_save')
         res.mustcontain('mutate_save')
         # Check again, it should be saved
         res = self.app.get('/mutate_get')
-        self.assertEqual(res.body, 'bar:42,foo:123')
+        self.assertEqual(res.body.decode('utf8'), 'bar:42,foo:123')

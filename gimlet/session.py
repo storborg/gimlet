@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import logging
 
 import abc
@@ -194,11 +196,11 @@ class Session(MutableMapping):
 
     def __repr__(self):
         keys = '\n'.join(["-- %s --\n%r" % (k, v) for k, v in
-                          self.channels.iteritems()])
+                          self.channels.items()])
         return "<Session \n%s\n>" % keys
 
     def make_session_id(self):
-        return os.urandom(16).encode('hex')
+        return hexlify(os.urandom(16))
 
     def read_channel(self, key):
         name = self.channel_names[key]

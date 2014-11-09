@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from unittest import TestCase
 
 from webob import Request, Response
@@ -18,7 +20,8 @@ class DeferredSetApp(object):
 
         def do_stuff():
             for ii in range(5):
-                yield "%d\n" % ii
+                yield str(ii).encode('utf8')
+                # yield b"%d\n" % ii
             sess.set('foo', 'bar', clientside='clientside' in req.params)
 
         resp = Response()
@@ -42,7 +45,7 @@ class TestNoBackend(TestCase):
     def test_deferred_set_backend(self):
         resp = self.app.get('/')
         resp.mustcontain('4')
-        self.assertEqual(self.backend.values(), [{'foo': 'bar'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'bar'}])
 
     def test_deferred_set_client(self):
         with self.assertRaises(ValueError):

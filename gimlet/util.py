@@ -1,5 +1,9 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from importlib import import_module
 from inspect import getmembers, isclass
+
+import six
 
 from .backends.base import BaseBackend
 
@@ -33,7 +37,7 @@ def parse_settings(settings, prefix='gimlet.'):
         raise ValueError('secret is required')
     if 'backend' in options and options['backend'] is not None:
         backend = options['backend']
-        if isinstance(backend, basestring):
+        if isinstance(backend, six.string_types):
             predicate = lambda m: (
                 isclass(m) and
                 issubclass(m, BaseBackend) and
@@ -50,7 +54,7 @@ def parse_settings(settings, prefix='gimlet.'):
     backend_cls = options.get('backend')
     if backend_cls is not None:
         backend_options = {}
-        for k in options.keys():
+        for k in list(options.keys()):
             if k.startswith('backend.'):
                 backend_options[k[8:]] = options.pop(k)
         options['backend'] = options['backend'](**backend_options)

@@ -1,6 +1,9 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from datetime import datetime, timedelta
 from unittest import TestCase
 
+import six
 from webob import Request, Response
 from webob.exc import HTTPNotFound
 from webtest import TestApp
@@ -43,7 +46,7 @@ class SampleApp(object):
         sess = req.environ['gimlet.session']
 
         resp = action(req, sess)
-        if isinstance(resp, basestring):
+        if isinstance(resp, six.string_types):
             resp = Response(resp)
         resp.content_type = 'text/plain'
         return resp(environ, start_response)
@@ -91,7 +94,7 @@ class SampleApp(object):
         return 'ok'
 
     def id(self, req, sess):
-        return str(sess.id)
+        return sess.id.decode('utf8')
 
     def time(self, req, sess):
         return str(sess.created_time)
@@ -122,40 +125,40 @@ class TestActions(TestCase):
 
     def test_getset_basic(self):
         self.app.get('/get/foo', status=404)
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         resp = self.app.get('/set/foo/bar')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [{'foo': 'bar'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'bar'}])
 
         resp = self.app.get('/get/foo')
         resp.mustcontain('bar')
-        self.assertEqual(self.backend.values(), [{'foo': 'bar'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'bar'}])
 
     def test_has_basic(self):
         resp = self.app.get('/has/foo')
         resp.mustcontain('false')
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         resp = self.app.get('/set/foo/blah')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [{'foo': 'blah'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'blah'}])
 
         resp = self.app.get('/has/foo')
         resp.mustcontain('true')
-        self.assertEqual(self.backend.values(), [{'foo': 'blah'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'blah'}])
 
     def test_delete_basic(self):
         resp = self.app.get('/set/foo/blah')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [{'foo': 'blah'}])
+        self.assertEqual(list(self.backend.values()), [{'foo': 'blah'}])
 
         resp = self.app.get('/get/foo')
         resp.mustcontain('blah')
 
         resp = self.app.get('/delete/foo')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [{}])
+        self.assertEqual(list(self.backend.values()), [{}])
 
     def test_set_permanent(self):
         resp = self.app.get('/set/boromir/111?permanent=1')
@@ -163,7 +166,7 @@ class TestActions(TestCase):
         # Ensure that we only have one session, it will correspond to the
         # permanent non-secure cookie.
         self.assertEqual(len(self.app.cookies), 1)
-        self.assertEqual(self.backend.values(), [{'boromir': '111'}])
+        self.assertEqual(list(self.backend.values()), [{'boromir': '111'}])
 
         resp = self.app.get('/get/boromir')
         resp.mustcontain('111')
@@ -193,7 +196,7 @@ class TestActions(TestCase):
         resp = self.app.get('https://localhost/is_permanent/uruk')
         resp.mustcontain('False')
 
-        self.assertEqual(self.backend.values(), [{'uruk': 'hai'}])
+        self.assertEqual(list(self.backend.values()), [{'uruk': 'hai'}])
 
         resp = self.app.get(
             'https://localhost/set/tree/beard?secure=1&permanent=1')
@@ -206,7 +209,7 @@ class TestActions(TestCase):
         resp.mustcontain('True')
 
         resp = self.app.get('https://localhost/get/tree?secure=1&permanent=0')
-        self.assertEqual(resp.body, 'None')
+        self.assertEqual(resp.body.decode('utf8'), 'None')
 
         resp = self.app.get('https://localhost/get/tree?secure=1&permanent=1')
         resp.mustcontain('beard')
@@ -214,12 +217,12 @@ class TestActions(TestCase):
         channel_keys = set()
         for channel in self.backend.values():
             self.assertEqual(len(channel.keys()), 1)
-            channel_keys.add(channel.keys()[0])
+            channel_keys.add(list(channel.keys())[0])
 
         self.assertEqual(set(channel_keys), set(['uruk', 'tree']))
 
         resp = self.app.get('https://localhost/get/uruk?secure=0')
-        self.assertEqual(resp.body, 'None')
+        self.assertEqual(resp.body.decode('utf8'), 'None')
 
     def test_set_insecure_nonpermanent_fails(self):
         with self.assertRaises(ValueError):
@@ -251,7 +254,7 @@ class TestActions(TestCase):
     def test_set_clientside(self):
         resp = self.app.get('/set/foo/bar?clientside=1')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         resp = self.app.get('/get/foo')
         resp.mustcontain('bar')
@@ -260,7 +263,7 @@ class TestActions(TestCase):
         resp = self.app.get(
             'https://localhost/set/foo/bar?clientside=1&secure=1')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         self.app.get('/get/foo', status=404)
 
@@ -292,7 +295,7 @@ class TestActions(TestCase):
         resp = self.app.get('/get/greeting?clientside=1')
         resp.mustcontain('aloha')
 
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         resp = self.app.get('/set/greeting/jambo')
         resp.mustcontain('ok')
@@ -300,7 +303,7 @@ class TestActions(TestCase):
         resp = self.app.get('/get/greeting')
         resp.mustcontain('jambo')
 
-        self.assertEqual(self.backend.values(), [{'greeting': 'jambo'}])
+        self.assertEqual(list(self.backend.values()), [{'greeting': 'jambo'}])
         self.backend.clear()
 
         self.app.get('/get/greeting', status=404)
@@ -308,11 +311,11 @@ class TestActions(TestCase):
     def test_iter_len(self):
         resp = self.app.get('/set/frodo/baggins?clientside=1')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [])
+        self.assertEqual(list(self.backend.values()), [])
 
         resp = self.app.get('/set/gandalf/grey')
         resp.mustcontain('ok')
-        self.assertEqual(self.backend.values(), [{'gandalf': 'grey'}])
+        self.assertEqual(list(self.backend.values()), [{'gandalf': 'grey'}])
 
         resp = self.app.get('/len')
         resp.mustcontain('2')
@@ -330,7 +333,7 @@ class TestActions(TestCase):
         timestamp = int(resp.body)
 
         resp = self.app.get('/time')
-        tstring = resp.body
+        tstring = resp.body.decode('utf8')
 
         dt = datetime.utcfromtimestamp(timestamp)
 
