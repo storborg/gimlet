@@ -13,11 +13,7 @@ def session_factory_factory(secret,
                             clientside=None,
                             cookie_name='gimlet',
                             encryption_key=None,
-                            fake_https=False,
-                            enable_http=True,
-                            enable_https=True,
-                            permanent=False,
-                            secure=False):
+                            permanent=False):
     """Configure a :class:`.session.Session` subclass."""
     if backend is None:
         if clientside is False:
@@ -47,7 +43,6 @@ def session_factory_factory(secret,
         'cookie_name': cookie_name,
 
         'defaults': {
-            'secure': secure,
             'permanent': permanent,
             'clientside': clientside,
         },
@@ -55,19 +50,10 @@ def session_factory_factory(secret,
         'serializer': URLSafeCookieSerializer(secret, backend, crypter),
     }
 
-    assert enable_http or enable_https, "at least one scheme must be enabled"
-
-    if enable_http:
-        configuration['channel_names']['insecure'] = cookie_name
-        configuration['channel_opts']['insecure'] = {'expires': future}
-
-    if enable_https:
-        configuration['channel_names']['secure_perm'] = cookie_name + '-sp'
-        configuration['channel_names']['secure_nonperm'] = cookie_name + '-sn'
-        configuration['channel_opts']['secure_perm'] = \
-            {'secure': (not fake_https), 'expires': future}
-        configuration['channel_opts']['secure_nonperm'] = \
-            {'secure': (not fake_https)}
+    configuration['channel_names']['perm'] = cookie_name + '-p'
+    configuration['channel_names']['nonperm'] = cookie_name + '-n'
+    configuration['channel_opts']['perm'] = {'expires': future}
+    configuration['channel_opts']['nonperm'] = {}
 
     return type(str('SessionFactory'), (Session,), configuration)
 

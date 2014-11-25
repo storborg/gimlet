@@ -20,12 +20,14 @@ class TestUtil(TestCase):
         settings = {
             'gimlet.backend': 'sql',
             'gimlet.backend.url': 'sqlite:///:memory:',
-            'gimlet.fake_https': True,
             'gimlet.secret': 'super-secret',
+            'gimlet.permanent': 'true',
             'non-gimlet-setting': None,
         }
         options = parse_settings(settings)
         self.assertNotIn('non-gimlet-setting', options)
+        self.assertEqual(options['permanent'], True)
+        self.assertIsInstance(options['backend'], SQLBackend)
 
     def test_parse_settings_absolute_backend(self):
         settings = {

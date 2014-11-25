@@ -39,9 +39,7 @@ class Session(MutableMapping):
 
         channels = {}
         for key in self.channel_names:
-            if (not self.channel_opts[key].get('secure') or
-                    request.scheme == 'https'):
-                channels[key] = self.read_channel(key)
+            channels[key] = self.read_channel(key)
         self.channels = channels
 
         self.has_backend = all(
@@ -49,14 +47,7 @@ class Session(MutableMapping):
 
     @property
     def default_channel(self):
-        if 'insecure' in self.channels:
-            return self.channels['insecure']
-        else:
-            try:
-                return self.channels['secure_perm']
-            except KeyError:
-                raise KeyError("'secure_perm' not found: channels are %r" %
-                               self.channels)
+        return self.channels['perm']
 
     @property
     def id(self):
@@ -73,7 +64,7 @@ class Session(MutableMapping):
     def response_callback(self, request, response):
         self.flushed = True
         for key in self.channels:
-            self.write_channel(response, key, self.channels[key])
+            self.write_channel(request, response, key, self.channels[key])
 
     def __getitem__(self, key):
         """Get value for ``key`` from the first channel it's found in."""
@@ -84,21 +75,13 @@ class Session(MutableMapping):
                 pass
         raise KeyError(key)
 
-    def _check_options(self, secure, permanent, clientside):
-        # If permanent is explicitly specified as False, ensure that secure is
-        # not explicitly set to False.
-        if (secure is False) and (permanent is False):
-            raise ValueError('setting non-secure non-permanent keys is not '
-                             'supported')
-
+    def _check_options(self, permanent, clientside):
         # If no backend is present, don't allow explicitly setting a key as
         # non-clientside.
         if (not self.has_backend) and (clientside is False):
             raise ValueError('setting a non-clientside key with no backend '
                              'present is not supported')
 
-        if secure is None:
-            secure = self.defaults['secure']
         if permanent is None:
             permanent = self.defaults['permanent']
         if clientside is None:
@@ -108,20 +91,14 @@ class Session(MutableMapping):
             raise ValueError('clientside keys cannot be set after the WSGI '
                              'response has been returned')
 
-        channel_key = 'insecure'
-        if secure:
-            if 'secure_perm' not in self.channels:
-                raise ValueError('cannot set a secure key outside of https '
-                                 'context, unless fake_https is used.')
-            if permanent:
-                channel_key = 'secure_perm'
-            else:
-                channel_key = 'secure_nonperm'
+        if permanent:
+            channel_key = 'perm'
+        else:
+            channel_key = 'nonperm'
 
         return self.channels[channel_key], clientside
 
-    def get(self, key, default=None, secure=DEFAULT, permanent=DEFAULT,
-            clientside=DEFAULT):
+    def get(self, key, default=None, permanent=DEFAULT, clientside=DEFAULT):
         """Get value for ``key`` or ``default`` if ``key`` isn't present.
 
         When no options are passed, this behaves like `[]`--it will return
@@ -135,7 +112,7 @@ class Session(MutableMapping):
         returned, just like a normal ``dict.get()``.
 
         """
-        options = secure, permanent, clientside
+        options = permanent, clientside
         if all(opt is DEFAULT for opt in options):
             action = lambda: self[key]
         else:
@@ -150,11 +127,10 @@ class Session(MutableMapping):
     def __setitem__(self, key, val):
         return self.set(key, val)
 
-    def set(self, key, val, secure=None, permanent=None, clientside=None):
+    def set(self, key, val, permanent=None, clientside=None):
         if key in self:
             del self[key]
-        channel, clientside = self._check_options(secure, permanent,
-                                                  clientside)
+        channel, clientside = self._check_options(permanent, clientside)
         channel.set(key, val, clientside=clientside)
 
         # If the response has already been flushed, we need to explicitly
@@ -162,9 +138,8 @@ class Session(MutableMapping):
         if self.flushed:
             channel.backend_write()
 
-    def save(self, secure=None, permanent=None, clientside=None):
-        channel, clientside = self._check_options(secure, permanent,
-                                                  clientside)
+    def save(self, permanent=None, clientside=None):
+        channel, clientside = self._check_options(permanent, clientside)
         if clientside:
             channel.client_dirty = True
         else:
@@ -187,12 +162,7 @@ class Session(MutableMapping):
         return sum([len(ch) for ch in self.channels.values()])
 
     def is_permanent(self, key):
-        return ((key in self.channels.get('secure_perm', {})) or
-                (key in self.channels.get('insecure', {})))
-
-    def is_secure(self, key):
-        return ((key in self.channels.get('secure_nonperm', {})) or
-                (key in self.channels.get('secure_perm', {})))
+        return key in self.channels.get('perm', {})
 
     def __repr__(self):
         keys = '\n'.join(["-- %s --\n%r" % (k, v) for k, v in
@@ -218,7 +188,7 @@ class Session(MutableMapping):
         else:
             return self.fresh_channel()
 
-    def write_channel(self, resp, key, channel):
+    def write_channel(self, req, resp, key, channel):
         name = self.channel_names[key]
 
         # Set a cookie IFF the following conditions:
@@ -226,8 +196,11 @@ class Session(MutableMapping):
         # OR
         # - the cookie is fresh
         if channel.client_dirty or channel.fresh:
-            resp.set_cookie(name, self.serializer.dumps(channel),
-                            httponly=True, **self.channel_opts[key])
+            resp.set_cookie(name,
+                            self.serializer.dumps(channel),
+                            httponly=True,
+                            secure=req.scheme == 'https',
+                            **self.channel_opts[key])
 
         # Write to the backend IFF the following conditions:
         # - data has been changed on the backend

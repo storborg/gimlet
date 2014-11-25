@@ -19,28 +19,13 @@ class TestSession(TestCase):
         sess = self._make_session()
         sess['a'] = 'a'
         self.assertIn('a', sess)
-        self.assertIn('a', sess.channels['insecure'])
+        self.assertIn('a', sess.channels['nonperm'])
 
-    def test_session_secure_nonperm(self):
-        sess = self._make_session(secure=True, fake_https=True)
-        sess['a'] = 'a'
-        self.assertIn('a', sess.channels['secure_nonperm'])
-        self.assertNotIn('a', sess.channels['insecure'])
-        self.assertNotIn('a', sess.channels['secure_perm'])
-
-    def test_session_secure_perm(self):
-        sess = self._make_session(secure=True, permanent=True, fake_https=True)
-        sess['a'] = 'a'
-        self.assertIn('a', sess.channels['secure_perm'])
-        self.assertNotIn('a', sess.channels['insecure'])
-        self.assertNotIn('a', sess.channels['secure_nonperm'])
-
-    def test_session_set_insecure(self):
-        sess = self._make_session(secure=True, permanent=True, fake_https=True)
-        sess.set('a', 'a', secure=False)
-        self.assertIn('a', sess.channels['insecure'])
-        self.assertNotIn('a', sess.channels['secure_perm'])
-        self.assertNotIn('a', sess.channels['secure_nonperm'])
+    def test_session_nonperm(self):
+        sess = self._make_session()
+        sess.set('a', 'a', permanent=False)
+        self.assertIn('a', sess.channels['nonperm'])
+        self.assertNotIn('a', sess.channels['perm'])
 
     def test_invalidate(self):
         sess = self._make_session()
@@ -126,7 +111,7 @@ class App(object):
 
     def mangle_cookie(self, request):
         resp = Response('mangle_cookie')
-        resp.set_cookie('gimlet', request.cookies['gimlet'].lower())
+        resp.set_cookie('gimlet-p', request.cookies['gimlet-p'].lower())
         return resp
 
 
@@ -143,16 +128,16 @@ class TestSession_Functional(TestCase):
         # Next request should contain cookies
         res = self.app.get('/get')
         self.assert_(res.request.cookies)
-        self.assertIn('gimlet', res.request.cookies)
-        old_cookie_value = res.request.cookies['gimlet']
+        self.assertIn('gimlet-p', res.request.cookies)
+        old_cookie_value = res.request.cookies['gimlet-p']
         self.assert_(old_cookie_value)
         # Invalidation should empty the session and set a new cookie
         res = self.app.get('/invalidate')
         self.assertIn('Set-Cookie', res.headers)
         self.assertEqual(res.request.session, {})
         res = self.app.get('/get')
-        self.assertIn('gimlet', res.request.cookies)
-        new_cookie_value = res.request.cookies['gimlet']
+        self.assertIn('gimlet-p', res.request.cookies)
+        new_cookie_value = res.request.cookies['gimlet-p']
         self.assert_(new_cookie_value)
         self.assertNotEqual(new_cookie_value, old_cookie_value)
 
@@ -162,15 +147,15 @@ class TestSession_Functional(TestCase):
         self.assertEqual(res.request.cookies, {})
         self.assertIn('Set-Cookie', res.headers)
         # Mangle cookie
-        orig_cookie = self.app.cookies['gimlet']
+        orig_cookie = self.app.cookies['gimlet-p']
         self.app.get('/mangle_cookie')
-        mangled_cookie = self.app.cookies['gimlet']
+        mangled_cookie = self.app.cookies['gimlet-p']
         self.assertEqual(mangled_cookie, orig_cookie.lower())
         # Next request should succeed and then set a new cookie
         self.app.get('/get')
-        self.assertIn('gimlet', self.app.cookies)
-        self.assertNotEqual(self.app.cookies['gimlet'], orig_cookie)
-        self.assertNotEqual(self.app.cookies['gimlet'], mangled_cookie)
+        self.assertIn('gimlet-p', self.app.cookies)
+        self.assertNotEqual(self.app.cookies['gimlet-p'], orig_cookie)
+        self.assertNotEqual(self.app.cookies['gimlet-p'], mangled_cookie)
 
     def test_mutate(self):
         # First set a key.

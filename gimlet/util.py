@@ -26,7 +26,7 @@ def parse_settings(settings, prefix='gimlet.'):
 
     """
     options = {}
-    bool_options = ('clientside', 'fake_https', 'permanent', 'secure')
+    bool_options = ('clientside', 'permanent')
     for k, v in settings.items():
         if k.startswith(prefix):
             k = k[len(prefix):]

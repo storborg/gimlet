@@ -4,7 +4,7 @@ import sys
 
 PY3 = sys.version_info[0] > 2
 
-if not PY3:
+if not PY3:  # pragma: nocover
     import pylibmc
 
 from .base import BaseBackend

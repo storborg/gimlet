@@ -9,7 +9,6 @@ possible with slow components', which is to say, I/O load will be minimized,
 but it will work with fairly simple and mature storage backends. It provides:
 
 * Easy setup and configuration
-* Supports split HTTP / HTTPS environments smoothly
 * Key-value dict-like session access
 * Multiple backend options, including redis and SQL
 * Efficient - absolute minimal I/O load
@@ -74,14 +73,13 @@ To specify that a key should be stored on the client, pass the
     enable encryption of cookies, supply a random 64-char hex string as the
     ``encryption_key`` argument to ``SessionMiddleware``.
 
-Keys can also be set as secure or not, and within secure keys, permanent or
-not. For example::
+Keys can also be set as permanent or not. For example::
 
-    session.set('account_id', 777, secure=True, permanent=False)
+    session.set('account_id', 777, permanent=False)
 
 Or, combined::
 
-    session.set('cart_id', 12345, clientside=True, secure=True)
+    session.set('cart_id', 12345, clientside=True, permanent=True)
 
 
 Contents

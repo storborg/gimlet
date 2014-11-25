@@ -1,6 +1,28 @@
 Gimlet Changelog
 ================
 
+Version 0.5
+-----------
+
+- Remove support for hybrid HTTP/HTTPS environments. The use cases for this are
+  essentially gone with the advent of OCSP, SPDY, etc, and removing support
+  simplifies things and streamlines the cookie payload.
+
+Version 0.4
+-----------
+
+- ?
+
+Version 0.3
+-----------
+
+- ?
+
+Version 0.2
+-----------
+
+- ?
+
 Version 0.1
 -----------
 

@@ -79,9 +79,6 @@ class SampleApp(object):
     def flatten(self, req, sess):
         return ':'.join(sess[req.matchdict['key']])
 
-    def is_secure(self, req, sess):
-        return str(sess.is_secure(req.matchdict['key']))
-
     def is_permanent(self, req, sess):
         return str(sess.is_permanent(req.matchdict['key']))
 
@@ -165,68 +162,14 @@ class TestActions(TestCase):
         resp.mustcontain('ok')
         # Ensure that we only have one session, it will correspond to the
         # permanent non-secure cookie.
-        self.assertEqual(len(self.app.cookies), 1)
+        self.assertEqual(len(self.app.cookies), 2)
         self.assertEqual(list(self.backend.values()), [{'boromir': '111'}])
 
         resp = self.app.get('/get/boromir')
         resp.mustcontain('111')
 
-        resp = self.app.get('https://localhost/is_secure/boromir')
-        resp.mustcontain('False')
-
         resp = self.app.get('/is_permanent/boromir')
         resp.mustcontain('True')
-
-    def test_set_secure_on_http(self):
-        with self.assertRaises(ValueError):
-            self.app.get('/set/foo/bar?secure=1')
-
-    def test_set_secure_on_https(self):
-        resp = self.app.get('https://localhost/set/uruk/hai?secure=1')
-        resp.mustcontain('ok')
-
-        self.app.get('/get/uruk', status=404)
-
-        resp = self.app.get('https://localhost/get/uruk')
-        resp.mustcontain('hai')
-
-        resp = self.app.get('https://localhost/is_secure/uruk')
-        resp.mustcontain('True')
-
-        resp = self.app.get('https://localhost/is_permanent/uruk')
-        resp.mustcontain('False')
-
-        self.assertEqual(list(self.backend.values()), [{'uruk': 'hai'}])
-
-        resp = self.app.get(
-            'https://localhost/set/tree/beard?secure=1&permanent=1')
-        resp.mustcontain('ok')
-
-        resp = self.app.get('https://localhost/is_secure/tree')
-        resp.mustcontain('True')
-
-        resp = self.app.get('https://localhost/is_permanent/tree')
-        resp.mustcontain('True')
-
-        resp = self.app.get('https://localhost/get/tree?secure=1&permanent=0')
-        self.assertEqual(resp.body.decode('utf8'), 'None')
-
-        resp = self.app.get('https://localhost/get/tree?secure=1&permanent=1')
-        resp.mustcontain('beard')
-
-        channel_keys = set()
-        for channel in self.backend.values():
-            self.assertEqual(len(channel.keys()), 1)
-            channel_keys.add(list(channel.keys())[0])
-
-        self.assertEqual(set(channel_keys), set(['uruk', 'tree']))
-
-        resp = self.app.get('https://localhost/get/uruk?secure=0')
-        self.assertEqual(resp.body.decode('utf8'), 'None')
-
-    def test_set_insecure_nonpermanent_fails(self):
-        with self.assertRaises(ValueError):
-            self.app.get('/set/gimli/bogus-value?secure=0&permanent=0')
 
     def test_cookie_metadata(self):
         resp = self.app.get('https://localhost/set/frodo/ring')
@@ -235,18 +178,15 @@ class TestActions(TestCase):
             key, val = hdr.split('=', 1)
             cookies[key] = val.lower()
 
-        self.assertIn('secure', cookies['gimlet-sn'])
-        self.assertIn('secure', cookies['gimlet-sp'])
-        self.assertNotIn('secure', cookies['gimlet'])
+        self.assertIn('secure', cookies['gimlet-n'])
+        self.assertIn('secure', cookies['gimlet-p'])
 
         for cookie in cookies.values():
             self.assertIn('httponly', cookie)
 
-        self.assertIn('max-age=', cookies['gimlet-sp'])
-        self.assertNotIn('max-age', cookies['gimlet-sn'])
-        self.assertIn('max-age', cookies['gimlet'])
-        self.assertNotIn('expires', cookies['gimlet-sn'])
-        self.assertIn('expires', cookies['gimlet'])
+        self.assertIn('max-age=', cookies['gimlet-p'])
+        self.assertNotIn('max-age', cookies['gimlet-n'])
+        self.assertNotIn('expires', cookies['gimlet-n'])
 
         # XXX Assert that ``gimlet`` and ``gimlet-sp`` cookies are effectively
         # permanent.
@@ -258,32 +198,6 @@ class TestActions(TestCase):
 
         resp = self.app.get('/get/foo')
         resp.mustcontain('bar')
-
-    def test_set_clientside_secure(self):
-        resp = self.app.get(
-            'https://localhost/set/foo/bar?clientside=1&secure=1')
-        resp.mustcontain('ok')
-        self.assertEqual(list(self.backend.values()), [])
-
-        self.app.get('/get/foo', status=404)
-
-        resp = self.app.get('https://localhost/get/foo')
-        resp.mustcontain('bar')
-
-    def test_move_key_from_insecure_to_secure(self):
-        resp = self.app.get('/set/greeting/hello')
-        resp.mustcontain('ok')
-
-        resp = self.app.get('/get/greeting')
-        resp.mustcontain('hello')
-
-        resp = self.app.get('https://localhost/set/greeting/bonjour?secure=1')
-        resp.mustcontain('ok')
-
-        resp = self.app.get('https://localhost/get/greeting')
-        resp.mustcontain('bonjour')
-
-        self.app.get('/get/greeting', status=404)
 
     def test_delete_nonexistent(self):
         self.app.get('/delete/foo', status=404)
@@ -345,11 +259,11 @@ class TestActions(TestCase):
 
     def test_repr(self):
         self.app.get('/set/frodo/baggins')
-        self.app.get('https://localhost/set/meriadoc/brandybuck?secure=1')
+        self.app.get('https://localhost/set/meriadoc/brandybuck')
         self.app.get(
-            'https://localhost/set/samwise/gamgee?secure=1&permanent=1')
+            'https://localhost/set/samwise/gamgee?permanent=1')
         self.app.get(
-            'https://localhost/set/peregrin/took?secure=1&clientside=1')
+            'https://localhost/set/peregrin/took?clientside=1')
 
         resp = self.app.get('https://localhost/repr')
         resp.mustcontain('frodo')
@@ -384,30 +298,3 @@ class TestNoBackend(TestCase):
     def test_bad_middleware_config(self):
         with self.assertRaises(ValueError):
             SessionMiddleware(inner_app, 's3krit', clientside=False)
-
-
-class TestFakeHTTPS(TestCase):
-
-    def setUp(self):
-        wrapped_app = SessionMiddleware(inner_app, 's3krit', fake_https=True)
-        self.app = TestApp(wrapped_app)
-
-    def test_getset_basic(self):
-        self.app.get('/get/foo', status=404)
-
-        resp = self.app.get('/set/foo/bar?secure=1')
-        resp.mustcontain('ok')
-
-        resp = self.app.get('/get/foo')
-        resp.mustcontain('bar')
-
-    def test_cookie_metadata(self):
-        resp = self.app.get('https://localhost/set/frodo/ring')
-        cookies = {}
-        for hdr in resp.headers.getall('Set-Cookie'):
-            key, val = hdr.split('=', 1)
-            cookies[key] = val.lower()
-
-        self.assertNotIn('secure', cookies['gimlet-sn'])
-        self.assertNotIn('secure', cookies['gimlet-sp'])
-        self.assertNotIn('secure', cookies['gimlet'])
