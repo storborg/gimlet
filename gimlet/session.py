@@ -29,7 +29,6 @@ class Session(MutableMapping):
     backend = abc.abstractproperty
     channel_names = abc.abstractproperty
     channel_opts = abc.abstractproperty
-    cookie_name = abc.abstractproperty
     defaults = abc.abstractproperty
     serializer = abc.abstractproperty
 

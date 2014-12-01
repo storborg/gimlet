@@ -11,7 +11,8 @@ from .util import parse_settings
 def session_factory_factory(secret,
                             backend=None,
                             clientside=None,
-                            cookie_name='gimlet',
+                            cookie_name_temporary='gimlet-n',
+                            cookie_name_permanent='gimlet-p',
                             encryption_key=None,
                             permanent=False):
     """Configure a :class:`.session.Session` subclass."""
@@ -40,8 +41,6 @@ def session_factory_factory(secret,
         'channel_opts': {
         },
 
-        'cookie_name': cookie_name,
-
         'defaults': {
             'permanent': permanent,
             'clientside': clientside,
@@ -50,8 +49,8 @@ def session_factory_factory(secret,
         'serializer': URLSafeCookieSerializer(secret, backend, crypter),
     }
 
-    configuration['channel_names']['perm'] = cookie_name + '-p'
-    configuration['channel_names']['nonperm'] = cookie_name + '-n'
+    configuration['channel_names']['perm'] = cookie_name_permanent
+    configuration['channel_names']['nonperm'] = cookie_name_temporary
     configuration['channel_opts']['perm'] = {'expires': future}
     configuration['channel_opts']['nonperm'] = {}
 
