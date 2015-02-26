@@ -2,12 +2,12 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
 
+from .base import BaseBackend
+
 PY3 = sys.version_info[0] > 2
 
 if not PY3:  # pragma: nocover
     import pylibmc
-
-from .base import BaseBackend
 
 
 class MemcacheBackend(BaseBackend):
