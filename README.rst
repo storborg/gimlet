@@ -1,6 +1,15 @@
 Gimlet - Simple High-Performance WSGI Sessions
 ==============================================
 
+.. image:: https://secure.travis-ci.org/storborg/gimlet.png
+    :target: http://travis-ci.org/storborg/gimlet
+.. image:: https://coveralls.io/repos/storborg/gimlet/badge.png?branch=master
+    :target: https://coveralls.io/r/storborg/gimlet
+.. image:: https://pypip.in/v/gimlet/badge.png
+    :target: https://crate.io/packages/gimlet
+.. image:: https://pypip.in/d/gimlet/badge.png
+    :target: https://crate.io/packages/gimlet
+
 Scott Torborg - `Cart Logic <http://www.cartlogic.com>`_
 
 Gimlet is a Python infrastructure block to provide versatile key-value
