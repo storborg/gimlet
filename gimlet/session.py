@@ -46,6 +46,9 @@ class Session(MutableMapping):
         self.has_backend = all(
             (ch.backend is not None) for ch in channels.values())
 
+        if hasattr(request, 'add_response_callback'):
+            request.add_response_callback(self.write_callback)
+
     @property
     def default_channel(self):
         return self.channels['perm']
@@ -62,10 +65,15 @@ class Session(MutableMapping):
     def created_time(self):
         return self.default_channel.created_time
 
-    def response_callback(self, request, response):
+    def write_callback(self, request, response):
         self.flushed = True
         for key in self.channels:
             self.write_channel(request, response, key, self.channels[key])
+
+    def response_callback(self, request, response):
+        # This is a noop, but exists for compatibilty with usage of previous
+        # versions of gimlet, that did not implicitly add the write callback.
+        pass
 
     def __getitem__(self, key):
         """Get value for ``key`` from the first channel it's found in."""

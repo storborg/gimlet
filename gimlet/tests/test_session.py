@@ -78,7 +78,7 @@ class App(object):
         view_name = request.path_info_pop()
         view = getattr(self, view_name)
         response = view(request)
-        request.session.response_callback(request, response)
+        request.session.write_callback(request, response)
         return response(environ, start_response)
 
     def get(self, request):

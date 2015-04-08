@@ -18,5 +18,5 @@ class SessionMiddleware(object):
         sess = self.session_factory(req)
         req.environ[self.environ_key] = sess
         resp = req.get_response(self.app)
-        sess.response_callback(req, resp)
+        sess.write_callback(req, resp)
         return resp(environ, start_response)
