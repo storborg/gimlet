@@ -51,6 +51,7 @@ class TestSession(TestCase):
         self.assertNotIn('_csrft_', sess)
         token = sess.get_csrf_token()
         self.assertIn('_csrft_', sess)
+        self.assertIsInstance(token, str)
         self.assertEqual(token, sess.get_csrf_token())
 
 

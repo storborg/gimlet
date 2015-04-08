@@ -13,6 +13,8 @@ from collections import MutableMapping
 
 from itsdangerous import BadSignature
 
+from .compat import to_native_str
+
 log = logging.getLogger('gimlet')
 
 
@@ -232,7 +234,7 @@ class Session(MutableMapping):
         return storage
 
     def new_csrf_token(self):
-        token = hexlify(os.urandom(20))
+        token = to_native_str(hexlify(os.urandom(20)))
         self['_csrft_'] = token
         return token
 
