@@ -23,7 +23,7 @@ if not PY3:
 
 
 setup(name="gimlet",
-      version='0.5.2.dev',
+      version='0.5.2',
       description='Simple High-Performance WSGI Sessions',
       long_description='',
       classifiers=[

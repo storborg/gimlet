@@ -37,7 +37,7 @@ copyright = u'2012-2014, Scott Torborg'
 # The short X.Y version.
 version = '0.5'
 # The full version, including alpha/beta/rc tags.
-release = '0.5.2.dev'
+release = '0.5.2'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
